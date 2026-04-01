@@ -5,7 +5,7 @@ import {
   ArrowRight, Phone, Mail, MapPin, Activity, Check,
   Target, Zap, Users, Calculator, BookOpen, Star, 
   ArrowUpRight, BarChart3, Quote, ChevronDown, ChevronsDown,
-  Facebook, Twitter, Instagram, Linkedin
+  Facebook, Twitter, Instagram, Linkedin, Download, Lock
 } from 'lucide-react';
 
 // --- AIO & SEO Metadata Simulation ---
@@ -134,10 +134,249 @@ const AnimatedProgress = ({ width, delay = 0 }) => {
 // --- CALCULATOR WIDGETS ---
 const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
+// --- PDF Report Generator Utility ---
+const generateSipReport = (calcData, leadData, allocation) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert("Please allow popups to download the report.");
+    return;
+  }
+
+  const today = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+  const formatCurrencyLocal = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Ask Geo - Wealth Projection Blueprint</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; color: #18181b; background: #ffffff; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .page-container { width: 210mm; min-height: 297mm; margin: 0 auto; position: relative; overflow: hidden; }
+        .header { background: #09090b; color: #ffffff; padding: 50px 50px 40px 50px; position: relative; overflow: hidden; }
+        .header::after { content: ''; position: absolute; top: -50%; right: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(16, 185, 129, 0.25), transparent 70%); border-radius: 50%; filter: blur(40px); pointer-events: none; }
+        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 25px; }
+        .logo-img { height: 45px; filter: brightness(0) invert(1); }
+        .report-title { font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #10b981; margin-bottom: 10px; }
+        .main-heading { font-size: 42px; font-weight: 300; letter-spacing: -1px; margin: 0 0 10px 0; line-height: 1.1; }
+        .client-info { display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-top: 30px; }
+        .info-block p { margin: 0 0 5px 0; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a1a1aa; }
+        .info-block h4 { margin: 0; font-size: 16px; font-weight: 500; }
+        .content { padding: 40px 50px; }
+        .chart-container { background: #09090b; border-radius: 20px; padding: 30px; color: white; margin-bottom: 30px; }
+        .chart-title { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #a1a1aa; margin-bottom: 20px; }
+        .highlight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .metric-card { background: #f4f4f5; border-radius: 16px; padding: 25px; border: 1px solid #e4e4e7; }
+        .metric-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #71717a; margin-bottom: 8px; }
+        .metric-value { font-size: 32px; font-weight: 300; margin: 0; color: #18181b; letter-spacing: -1px; }
+        .metric-value.success { color: #059669; font-weight: 500; }
+        .allocation-table { width: 100%; border-collapse: collapse; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; background: white; }
+        .allocation-table th { background: #f4f4f5; text-align: left; padding: 12px 16px; font-size: 11px; color: #71717a; text-transform: uppercase; }
+        .allocation-table td { padding: 14px 16px; border-bottom: 1px solid #e4e4e7; font-size: 14px; }
+        .allocation-table tr:last-child td { border-bottom: none; }
+        .footer { position: absolute; bottom: 0; width: 100%; padding: 30px 50px; border-top: 1px solid #e4e4e7; background: #ffffff; box-sizing: border-box; }
+      </style>
+    </head>
+    <body>
+      <div class="page-container">
+        <div class="header">
+          <div class="logo-container">
+            <img src="https://static.wixstatic.com/media/c12706_95ffde7d7fdf43fcb12e87a36b56eef6~mv2.png" alt="Ask Geo" class="logo-img" />
+          </div>
+          <div class="report-title">Wealth Projection Blueprint</div>
+          <h1 class="main-heading">Systematic Investment<br/>& Allocation Plan</h1>
+          <div class="client-info">
+            <div class="info-block">
+              <p>Prepared For</p>
+              <h4>${leadData.name}</h4>
+              <h4 style="color: #a1a1aa; font-weight: 400; font-size: 13px; margin-top: 4px;">${leadData.email}</h4>
+            </div>
+            <div class="info-block" style="text-align: right;">
+              <p>Date</p>
+              <h4>${today}</h4>
+              <h4 style="color: #a1a1aa; font-weight: 400; font-size: 13px; margin-top: 4px;">Ref: AG-SIP-${Math.floor(Math.random() * 10000)}</h4>
+            </div>
+          </div>
+        </div>
+        <div class="content">
+          <p style="font-size: 16px; color: #52525b; line-height: 1.6; font-weight: 400; margin-bottom: 30px;">
+            Based on a monthly investment of <strong>${formatCurrencyLocal(calcData.monthlyInvestment)}</strong> over <strong>${calcData.years} years</strong> at an expected return of <strong>${calcData.expectedReturn}% p.a.</strong>, here is your customized trajectory and live market allocation strategy.
+          </p>
+          <div class="chart-container">
+            <div class="chart-title">Projected Future Value</div>
+            <div style="font-size: 56px; font-weight: 300; letter-spacing: -2px; margin-bottom: 20px;">${formatCurrencyLocal(calcData.maturityValue)}</div>
+            <svg style="width: 100%; height: 120px; display: block; overflow: visible;" viewBox="0 0 1000 200" preserveAspectRatio="none">
+              <path d="M0,200 L1000,100" stroke="#52525b" stroke-width="2" fill="none" />
+              <path d="M0,200 Q600,180 1000,0" stroke="#10b981" stroke-width="4" fill="none" />
+              <path d="M0,200 Q600,180 1000,0 L1000,200 Z" fill="rgba(16, 185, 129, 0.2)" />
+            </svg>
+          </div>
+          <div class="highlight-grid">
+            <div class="metric-card">
+              <div class="metric-label">Total Invested Amount</div>
+              <div class="metric-value">${formatCurrencyLocal(calcData.totalInvested)}</div>
+            </div>
+            <div class="metric-card" style="background: #ecfdf5; border-color: #a7f3d0;">
+              <div class="metric-label" style="color: #065f46;">Total Wealth Gained</div>
+              <div class="metric-value success">+${formatCurrencyLocal(calcData.wealthGained)}</div>
+            </div>
+          </div>
+          <div style="margin-top: 30px;">
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #18181b;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              Live Market Allocation Strategy
+            </div>
+            <p style="font-size: 12px; color: #71717a; margin-bottom: 15px;">AI-driven recommended deployment for your ₹${calcData.monthlyInvestment.toLocaleString('en-IN')} monthly SIP based on current market valuations.</p>
+            <table class="allocation-table">
+              <thead><tr><th>Fund Name / AMC</th><th>Category</th><th>Allocation (%)</th><th style="text-align: right;">Monthly (₹)</th></tr></thead>
+              <tbody>
+                ${allocation.map(fund => `
+                  <tr>
+                    <td><strong style="color: #18181b;">${fund.name}</strong></td>
+                    <td><span style="background: #f4f4f5; padding: 4px 8px; border-radius: 4px; font-size: 11px;">${fund.category}</span></td>
+                    <td><strong>${fund.percent}%</strong></td>
+                    <td style="text-align: right; color: #10b981; font-weight: 600;">${formatCurrencyLocal(fund.amount)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="footer">
+          <p style="font-size: 9px; color: #71717a; text-align: justify; margin-bottom: 10px;">Disclaimer: This blueprint is generated by Ask Geo AI Tools for educational and planning purposes only. Mutual Fund investments are subject to market risks. The fund names listed are model recommendations reflecting current market logic and do not constitute formal financial advice.</p>
+          <div style="text-align: right; font-size: 12px; font-weight: 600;">Ask Geo Financial Services<br/><span style="color: #71717a; font-weight: 400; font-size: 11px;">www.askgeo.in | +91 99606 24271</span></div>
+        </div>
+      </div>
+      <script>window.onload = function() { setTimeout(() => { window.print(); }, 500); };</script>
+    </body>
+    </html>
+  `;
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+};
+
+// --- Lead Capture Modal Component ---
+const LeadCaptureModal = ({ isOpen, onClose, onDownloadComplete }) => {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+  const [otp, setOtp] = useState(['', '', '', '']);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const otpRefs = [useRef(), useRef(), useRef(), useRef()];
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setFormData({ name: '', phone: '', email: '' });
+      setOtp(['', '', '', '']);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSendOtp = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.phone || !formData.email) return;
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setStep(2);
+    }, 1000);
+  };
+
+  const handleVerifyOtp = (e) => {
+    e.preventDefault();
+    if (otp.join('').length < 4) return;
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      onDownloadComplete(formData);
+    }, 1200);
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value !== '' && index < 3) otpRefs[index + 1].current.focus();
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && otp[index] === '' && index > 0) otpRefs[index - 1].current.focus();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="bg-zinc-950 px-8 py-6 flex justify-between items-center relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+           <div>
+             <h3 className="text-white text-xl font-medium tracking-tight">Download Report</h3>
+             <p className="text-emerald-400 text-xs font-medium tracking-widest uppercase mt-1">Free PDF Blueprint</p>
+           </div>
+           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
+             <X className="w-4 h-4" />
+           </button>
+        </div>
+        <div className="p-8">
+          {step === 1 ? (
+            <form onSubmit={handleSendOtp} className="space-y-5 animate-in slide-in-from-left-4 duration-300">
+              <p className="text-sm text-zinc-500 font-light mb-6">Enter your details to generate your customized wealth projection and market allocation blueprint.</p>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-2">Full Name</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-zinc-900 bg-zinc-50 focus:bg-white" placeholder="e.g. Rajesh Sharma" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-2">Phone Number</label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-zinc-200 bg-zinc-100 text-zinc-500 text-sm font-medium">+91</span>
+                  <input required type="tel" maxLength="10" pattern="[0-9]{10}" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 rounded-r-xl border border-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-zinc-900 bg-zinc-50 focus:bg-white" placeholder="10-digit mobile number" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-2">Email Address</label>
+                <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-zinc-900 bg-zinc-50 focus:bg-white" placeholder="you@example.com" />
+              </div>
+              <button type="submit" disabled={isProcessing} className="w-full mt-4 bg-zinc-950 hover:bg-emerald-600 text-white font-medium py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-70">
+                {isProcessing ? <span className="flex items-center gap-2"><Activity className="w-4 h-4 animate-spin" /> Verifying...</span> : <>Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+                  <Lock className="w-6 h-6 text-emerald-600" />
+                </div>
+                <h4 className="text-xl font-medium text-zinc-900 mb-2">Verify your number</h4>
+                <p className="text-sm text-zinc-500 font-light">We've sent a 4-digit security code to <br/><strong className="font-medium">+91 {formData.phone}</strong></p>
+              </div>
+              <div className="flex justify-center gap-3">
+                {otp.map((digit, index) => (
+                  <input key={index} ref={otpRefs[index]} type="text" maxLength="1" value={digit} onChange={(e) => handleOtpChange(index, e.target.value)} onKeyDown={(e) => handleOtpKeyDown(index, e)} className="w-14 h-14 text-center text-2xl font-medium text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all" />
+                ))}
+              </div>
+              <button type="submit" disabled={isProcessing || otp.join('').length < 4} className="w-full mt-8 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/20">
+                {isProcessing ? <span className="flex items-center gap-2"><Activity className="w-4 h-4 animate-spin" /> Generating PDF...</span> : <>Verify & Download <Download className="w-4 h-4" strokeWidth={2.5} /></>}
+              </button>
+              <button type="button" onClick={() => setStep(1)} className="w-full text-center text-xs font-medium tracking-widest text-zinc-400 hover:text-zinc-900 transition-colors uppercase mt-4">Change Number</button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SipCalculatorWidget = () => {
   const [monthlyInvestment, setMonthlyInvestment] = useState(25000);
   const [years, setYears] = useState(15);
   const [expectedReturn, setExpectedReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const ratePerMonth = expectedReturn / 12 / 100;
   const totalMonths = years * 12;
@@ -145,51 +384,118 @@ const SipCalculatorWidget = () => {
   const maturityValue = monthlyInvestment * ((Math.pow(1 + ratePerMonth, totalMonths) - 1) / ratePerMonth) * (1 + ratePerMonth);
   const wealthGained = maturityValue - totalInvested;
 
+  // Real-world market allocation logic based on risk (expectedReturn proxy)
+  const getMarketAllocation = (amount, returnRate) => {
+    let distribution = [];
+    if (returnRate >= 14) { // Aggressive
+      distribution = [
+        { name: 'Nippon India Small Cap Fund', category: 'Small Cap', percent: 40 },
+        { name: 'Motilal Oswal Midcap Fund', category: 'Mid Cap', percent: 35 },
+        { name: 'Parag Parikh Flexi Cap Fund', category: 'Flexi Cap', percent: 25 },
+      ];
+    } else if (returnRate >= 10) { // Moderate
+      distribution = [
+        { name: 'HDFC Index Fund Nifty 50 Plan', category: 'Large Cap', percent: 40 },
+        { name: 'Parag Parikh Flexi Cap Fund', category: 'Flexi Cap', percent: 40 },
+        { name: 'SBI Magnum Midcap Fund', category: 'Mid Cap', percent: 20 },
+      ];
+    } else { // Conservative
+      distribution = [
+        { name: 'ICICI Prudential Bluechip Fund', category: 'Large Cap', percent: 50 },
+        { name: 'Kotak Balanced Advantage Fund', category: 'Hybrid', percent: 30 },
+        { name: 'Aditya Birla Sun Life Liquid Fund', category: 'Debt', percent: 20 },
+      ];
+    }
+    return distribution.map(fund => ({ ...fund, amount: Math.round(amount * (fund.percent / 100)) }));
+  };
+
+  const currentAllocation = getMarketAllocation(monthlyInvestment, expectedReturn);
+
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    const calcData = { monthlyInvestment, years, expectedReturn, totalInvested, wealthGained, maturityValue };
+    generateSipReport(calcData, leadData, currentAllocation);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-24 animate-in fade-in zoom-in-95 duration-500">
-      <div className="lg:col-span-7 space-y-10 lg:space-y-16">
-        <FadeIn delay={100}>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 sm:mb-6">
-            <label className="text-xs sm:text-sm font-medium tracking-widest text-zinc-500 uppercase">Monthly Investment</label>
-            <div className="text-xl sm:text-2xl lg:text-3xl font-light text-zinc-900 bg-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-zinc-200 w-full sm:w-auto text-right sm:text-left">{formatCurrency(monthlyInvestment)}</div>
-          </div>
-          <input type="range" min="1000" max="200000" step="1000" value={monthlyInvestment} onChange={(e) => setMonthlyInvestment(Number(e.target.value))} className="w-full h-2 sm:h-3 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200}>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 sm:mb-6">
-            <label className="text-xs sm:text-sm font-medium tracking-widest text-zinc-500 uppercase">Investment Period</label>
-            <div className="text-xl sm:text-2xl lg:text-3xl font-light text-zinc-900 bg-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-zinc-200 w-full sm:w-auto text-right sm:text-left">{years} Years</div>
-          </div>
-          <input type="range" min="1" max="40" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 sm:h-3 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={300}>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 sm:mb-6">
-            <label className="text-xs sm:text-sm font-medium tracking-widest text-zinc-500 uppercase">Expected Return (p.a)</label>
-            <div className="text-xl sm:text-2xl lg:text-3xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-emerald-100 w-full sm:w-auto text-right sm:text-left">{expectedReturn}%</div>
-          </div>
-          <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 sm:h-3 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5">
-        <FadeIn delay={400} className="bg-zinc-950 text-white p-8 sm:p-10 lg:p-12 xl:p-16 rounded-[2rem] sm:rounded-[2.5rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-[200px] h-[200px] sm:w-[400px] sm:h-[400px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-600/20 to-transparent rounded-full blur-[40px] sm:blur-[60px] pointer-events-none"></div>
-          <div className="space-y-8 sm:space-y-12 relative z-10 mb-12 lg:mb-16">
-            <div>
-              <p className="text-xs sm:text-sm font-medium tracking-widest text-zinc-400 uppercase mb-2">Total Invested</p>
-              <p className="text-2xl sm:text-3xl xl:text-4xl font-light">{formatCurrency(totalInvested)}</p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-24 animate-in fade-in zoom-in-95 duration-500">
+        <div className="lg:col-span-7 space-y-10 lg:space-y-12">
+          <FadeIn delay={100}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 sm:mb-6">
+              <label className="text-xs sm:text-sm font-medium tracking-widest text-zinc-500 uppercase">Monthly Investment</label>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-light text-zinc-900 bg-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-zinc-200 w-full sm:w-auto text-right sm:text-left">{formatCurrency(monthlyInvestment)}</div>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm font-medium tracking-widest text-zinc-400 uppercase mb-2">Wealth Gained</p>
-              <p className="text-2xl sm:text-3xl xl:text-4xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
+            <input type="range" min="1000" max="200000" step="1000" value={monthlyInvestment} onChange={(e) => setMonthlyInvestment(Number(e.target.value))} className="w-full h-2 sm:h-3 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 sm:mb-6">
+              <label className="text-xs sm:text-sm font-medium tracking-widest text-zinc-500 uppercase">Investment Period</label>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-light text-zinc-900 bg-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-zinc-200 w-full sm:w-auto text-right sm:text-left">{years} Years</div>
             </div>
-          </div>
-          <div className="pt-8 sm:pt-12 border-t border-zinc-800 relative z-10">
-            <p className="text-xs sm:text-sm font-bold tracking-widest text-zinc-500 uppercase mb-3 sm:mb-4">Future Value</p>
-            <p className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-light text-white tracking-tight leading-none mb-8 sm:mb-10">{formatCurrency(maturityValue)}</p>
-          </div>
-        </FadeIn>
+            <input type="range" min="1" max="40" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 sm:h-3 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={300}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-4 sm:mb-6">
+              <label className="text-xs sm:text-sm font-medium tracking-widest text-zinc-500 uppercase">Expected Return (p.a)</label>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 sm:px-6 sm:py-3 rounded-xl border border-emerald-100 w-full sm:w-auto text-right sm:text-left">{expectedReturn}%</div>
+            </div>
+            <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 sm:h-3 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+
+          {/* Real World Integration Preview */}
+          <FadeIn delay={400}>
+             <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 mt-8">
+               <div className="flex items-center gap-2 mb-4 text-emerald-600">
+                  <Bot className="w-5 h-5" />
+                  <h4 className="text-sm font-semibold tracking-widest uppercase">Live Market Allocation</h4>
+               </div>
+               <p className="text-sm text-zinc-600 mb-4">To achieve {expectedReturn}% p.a., Ask Geo AI recommends deploying your {formatCurrency(monthlyInvestment)} across these specific funds:</p>
+               <div className="space-y-3">
+                  {currentAllocation.map((fund, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm border-b border-zinc-200 pb-2 last:border-0 last:pb-0">
+                      <div>
+                        <p className="font-medium text-zinc-900">{fund.name}</p>
+                        <p className="text-xs text-zinc-500">{fund.category} • {fund.percent}%</p>
+                      </div>
+                      <p className="font-semibold text-emerald-600">{formatCurrency(fund.amount)}/mo</p>
+                    </div>
+                  ))}
+               </div>
+             </div>
+          </FadeIn>
+        </div>
+
+        <div className="lg:col-span-5 relative">
+          <FadeIn delay={400} className="bg-zinc-950 text-white p-8 sm:p-10 lg:p-12 xl:p-16 rounded-[2rem] sm:rounded-[2.5rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 w-[200px] h-[200px] sm:w-[400px] sm:h-[400px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-600/20 to-transparent rounded-full blur-[40px] sm:blur-[60px] pointer-events-none"></div>
+            
+            <div className="space-y-8 sm:space-y-12 relative z-10 mb-12 lg:mb-12">
+              <div>
+                <p className="text-xs sm:text-sm font-medium tracking-widest text-zinc-400 uppercase mb-2">Total Invested</p>
+                <p className="text-2xl sm:text-3xl xl:text-4xl font-light">{formatCurrency(totalInvested)}</p>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-medium tracking-widest text-zinc-400 uppercase mb-2">Wealth Gained</p>
+                <p className="text-2xl sm:text-3xl xl:text-4xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
+              </div>
+            </div>
+            
+            <div className="pt-8 sm:pt-10 border-t border-zinc-800 relative z-10">
+              <p className="text-xs sm:text-sm font-bold tracking-widest text-zinc-500 uppercase mb-3 sm:mb-4">Future Value</p>
+              <p className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-light text-white tracking-tight leading-none mb-8 sm:mb-10">{formatCurrency(maturityValue)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-zinc-950 border border-emerald-500/30 rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-3 group">
+                <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
