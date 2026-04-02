@@ -132,7 +132,6 @@ const AnimatedProgress = ({ width, delay = 0 }) => {
   );
 };
 
-
 // --- Shared General Contact Lightbox / Modal ---
 const GeneralContactModal = ({ isOpen, onClose, title }) => {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
@@ -214,20 +213,21 @@ const GeneralContactModal = ({ isOpen, onClose, title }) => {
 // --- CALCULATOR WIDGETS ---
 const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
-const generateSipReport = (calcData, leadData, allocation) => {
+const generateReport = (config, leadData) => {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert("Please allow popups to download the report.");
     return;
   }
   const today = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-  const formatCurrencyLocal = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  const refId = `AG-${Math.floor(Math.random() * 10000)}`;
+
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Ask Geo - Wealth Projection Blueprint</title>
+      <title>Ask Geo - ${config.reportTitle}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         @page { size: A4; margin: 0; }
@@ -260,10 +260,13 @@ const generateSipReport = (calcData, leadData, allocation) => {
       <div class="page-container">
         <div class="header">
           <div class="logo-container">
-            <img src="https://static.wixstatic.com/media/c12706_95ffde7d7fdf43fcb12e87a36b56eef6~mv2.png" alt="Ask Geo" class="logo-img" />
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #022c22; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            </div>
+            <div style="font-size: 24px; font-weight: 300; color: #ffffff; letter-spacing: -0.5px; font-family: 'Inter', sans-serif;">Ask <strong style="font-weight: 500; color: #6ee7b7;">Geo</strong></div>
           </div>
-          <div class="report-title">Wealth Projection Blueprint</div>
-          <h1 class="main-heading">Systematic Investment<br/>& Allocation Plan</h1>
+          <div class="report-title">${config.reportTitle}</div>
+          <h1 class="main-heading">${config.mainHeading}</h1>
           <div class="client-info">
             <div class="info-block">
               <p>Prepared For</p>
@@ -273,56 +276,59 @@ const generateSipReport = (calcData, leadData, allocation) => {
             <div class="info-block" style="text-align: right;">
               <p>Date</p>
               <h4>${today}</h4>
-              <h4 style="color: #d1fae5; font-weight: 400; font-size: 12px; margin-top: 4px;">Ref: AG-SIP-${Math.floor(Math.random() * 10000)}</h4>
+              <h4 style="color: #d1fae5; font-weight: 400; font-size: 12px; margin-top: 4px;">Ref: ${refId}</h4>
             </div>
           </div>
         </div>
         <div class="content">
           <p style="font-size: 14px; color: #475569; line-height: 1.6; font-weight: 400; margin-bottom: 25px;">
-            Based on a monthly investment of <strong>${formatCurrencyLocal(calcData.monthlyInvestment)}</strong> over <strong>${calcData.years} years</strong> at an expected return of <strong>${calcData.expectedReturn}% p.a.</strong>, here is your customized trajectory and live market allocation strategy.
+            ${config.summaryText}
           </p>
           <div class="chart-container">
-            <div class="chart-title">Projected Future Value</div>
-            <div style="font-size: 48px; font-weight: 300; letter-spacing: -2px; margin-bottom: 15px; color: #047857;">${formatCurrencyLocal(calcData.maturityValue)}</div>
+            <div class="chart-title">${config.primaryMetric.label}</div>
+            <div style="font-size: 48px; font-weight: 300; letter-spacing: -2px; margin-bottom: 15px; color: #047857;">${config.primaryMetric.value}</div>
             <svg style="width: 100%; height: 100px; display: block; overflow: visible;" viewBox="0 0 1000 200" preserveAspectRatio="none">
               <path d="M0,200 L1000,100" stroke="#cbd5e1" stroke-width="2" fill="none" />
               <path d="M0,200 Q600,180 1000,0" stroke="#059669" stroke-width="4" fill="none" />
               <path d="M0,200 Q600,180 1000,0 L1000,200 Z" fill="rgba(16, 185, 129, 0.1)" />
             </svg>
           </div>
+          
           <div class="highlight-grid">
-            <div class="metric-card">
-              <div class="metric-label">Total Invested Amount</div>
-              <div class="metric-value">${formatCurrencyLocal(calcData.totalInvested)}</div>
-            </div>
-            <div class="metric-card" style="background: #ecfdf5; border-color: #a7f3d0;">
-              <div class="metric-label" style="color: #065f46;">Total Wealth Gained</div>
-              <div class="metric-value success">+${formatCurrencyLocal(calcData.wealthGained)}</div>
-            </div>
+            ${config.secondaryMetrics.map(metric => `
+              <div class="metric-card" ${metric.success ? 'style="background: #ecfdf5; border-color: #a7f3d0;"' : ''}>
+                <div class="metric-label" ${metric.success ? 'style="color: #065f46;"' : ''}>${metric.label}</div>
+                <div class="metric-value ${metric.success ? 'success' : ''}">${metric.value}</div>
+              </div>
+            `).join('')}
           </div>
-          <div style="margin-top: 25px;">
-            <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #0f172a;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              Live Market Allocation Strategy
+
+          ${config.allocation ? `
+            <div style="margin-top: 25px;">
+              <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #0f172a;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Live Market Allocation Strategy
+              </div>
+              <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">${config.allocation.description}</p>
+              <table class="allocation-table">
+                <thead><tr><th>Fund Name / AMC</th><th>Category</th><th>Allocation (%)</th><th>Monthly (₹)</th></tr></thead>
+                <tbody>
+                  ${config.allocation.funds.map(fund => `
+                    <tr>
+                      <td><strong style="color: #0f172a;">${fund.name}</strong></td>
+                      <td><span style="background: #f1f5f9; padding: 4px 6px; border-radius: 4px; font-size: 10px;">${fund.category}</span></td>
+                      <td><strong>${fund.percent}%</strong></td>
+                      <td style="color: #059669; font-weight: 600;">${formatCurrency(fund.amount)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
             </div>
-            <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">AI-driven recommended deployment for your ₹${calcData.monthlyInvestment.toLocaleString('en-IN')} monthly SIP based on current market valuations.</p>
-            <table class="allocation-table">
-              <thead><tr><th>Fund Name / AMC</th><th>Category</th><th>Allocation (%)</th><th>Monthly (₹)</th></tr></thead>
-              <tbody>
-                ${allocation.map(fund => `
-                  <tr>
-                    <td><strong style="color: #0f172a;">${fund.name}</strong></td>
-                    <td><span style="background: #f1f5f9; padding: 4px 6px; border-radius: 4px; font-size: 10px;">${fund.category}</span></td>
-                    <td><strong>${fund.percent}%</strong></td>
-                    <td style="color: #059669; font-weight: 600;">${formatCurrencyLocal(fund.amount)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
+          ` : ''}
+
         </div>
         <div class="footer">
-          <p style="font-size: 8px; color: #94a3b8; text-align: left; margin-bottom: 8px;">Disclaimer: This blueprint is generated by Ask Geo AI Tools for educational and planning purposes only. Mutual Fund investments are subject to market risks. The fund names listed are model recommendations reflecting current market logic and do not constitute formal financial advice.</p>
+          <p style="font-size: 8px; color: #94a3b8; text-align: left; margin-bottom: 8px;">Disclaimer: This blueprint is generated by Ask Geo AI Tools for educational and planning purposes only. Calculations are subject to market risks and historical assumptions.</p>
           <div style="text-align: right; font-size: 11px; font-weight: 600; color: #0f172a;">Ask Geo Financial Services<br/><span style="color: #64748b; font-weight: 400; font-size: 10px;">www.askgeo.in | +91 99606 24271</span></div>
         </div>
       </div>
@@ -482,13 +488,23 @@ const SipCalculatorWidget = () => {
     return distribution.map(fund => ({ ...fund, amount: Math.round(amount * (fund.percent / 100)) }));
   };
 
-  const currentAllocation = getMarketAllocation(monthlyInvestment, expectedReturn);
-
   const handleDownloadInitiate = () => setIsLeadModalOpen(true);
   const handleDownloadComplete = (leadData) => {
     setIsLeadModalOpen(false);
-    const calcData = { monthlyInvestment, years, expectedReturn, totalInvested, wealthGained, maturityValue };
-    generateSipReport(calcData, leadData, currentAllocation);
+    generateReport({
+      reportTitle: "Wealth Projection Blueprint",
+      mainHeading: "Systematic Investment Plan",
+      summaryText: `Based on a monthly investment of <strong>${formatCurrency(monthlyInvestment)}</strong> over <strong>${years} years</strong> at an expected return of <strong>${expectedReturn}% p.a.</strong>`,
+      primaryMetric: { label: "Projected Future Value", value: formatCurrency(maturityValue) },
+      secondaryMetrics: [
+        { label: "Total Invested Amount", value: formatCurrency(totalInvested) },
+        { label: "Total Wealth Gained", value: `+${formatCurrency(wealthGained)}`, success: true }
+      ],
+      allocation: {
+        description: `AI-driven recommended deployment for your ₹${monthlyInvestment.toLocaleString('en-IN')} monthly SIP based on current market valuations.`,
+        funds: getMarketAllocation(monthlyInvestment, expectedReturn)
+      }
+    }, leadData);
   };
 
   return (
@@ -525,7 +541,7 @@ const SipCalculatorWidget = () => {
                </div>
                <p className="text-sm text-zinc-600 mb-5 font-light">To achieve {expectedReturn}% p.a., Ask Geo AI recommends deploying your {formatCurrency(monthlyInvestment)} across these specific funds:</p>
                <div className="space-y-3">
-                  {currentAllocation.map((fund, idx) => (
+                  {getMarketAllocation(monthlyInvestment, expectedReturn).map((fund, idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm border-b border-zinc-100 pb-3 last:border-0 last:pb-0 hover:bg-zinc-50 rounded-lg p-2 transition-colors">
                       <div>
                         <p className="font-medium text-zinc-900">{fund.name}</p>
@@ -540,22 +556,22 @@ const SipCalculatorWidget = () => {
         </div>
 
         <div className="lg:col-span-5 relative group">
-          <FadeIn delay={400} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+          <FadeIn delay={400} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
             <div className="absolute top-0 right-0 w-[250px] h-[250px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
             
             <div className="space-y-8 relative z-10 mb-10">
               <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200/70 uppercase mb-1">Total Invested</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Invested</p>
                 <p className="text-2xl sm:text-3xl font-light">{formatCurrency(totalInvested)}</p>
               </div>
               <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200/70 uppercase mb-1">Wealth Gained</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Wealth Gained</p>
                 <p className="text-2xl sm:text-3xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
               </div>
             </div>
             
-            <div className="pt-8 border-t border-emerald-800/50 relative z-10">
-              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-300 uppercase mb-3">Future Value</p>
+            <div className="pt-8 border-t border-zinc-800/80 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">Future Value</p>
               <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(maturityValue)}</p>
               
               <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
@@ -576,6 +592,7 @@ const StepUpCalculatorWidget = () => {
   const [stepUpPercent, setStepUpPercent] = useState(10);
   const [years, setYears] = useState(15);
   const [expectedReturn, setExpectedReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   let currentSip = initialSip;
   let totalInvested = 0;
@@ -591,73 +608,96 @@ const StepUpCalculatorWidget = () => {
   }
   const wealthGained = futureValue - totalInvested;
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Wealth Projection Blueprint",
+      mainHeading: "Step-Up SIP Acceleration Plan",
+      summaryText: `Based on an initial monthly investment of <strong>${formatCurrency(initialSip)}</strong> stepping up by <strong>${stepUpPercent}% annually</strong> over <strong>${years} years</strong> at an expected return of <strong>${expectedReturn}% p.a.</strong>`,
+      primaryMetric: { label: "Accelerated Future Value", value: formatCurrency(futureValue) },
+      secondaryMetrics: [
+        { label: "Total Invested Amount", value: formatCurrency(totalInvested) },
+        { label: "Total Wealth Gained", value: `+${formatCurrency(wealthGained)}`, success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
-             <Zap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
-             Step-Up SIP dramatically compresses your wealth creation timeline by aligning your investments with your annual salary hikes.
-          </p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
+               <Zap className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
+               Step-Up SIP dramatically compresses your wealth creation timeline by aligning your investments with your annual salary hikes.
+            </p>
+          </div>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Initial Monthly SIP</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(initialSip)}</div>
+            </div>
+            <input type="range" min="1000" max="200000" step="1000" value={initialSip} onChange={(e) => setInitialSip(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={150} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Annual Step-Up</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{stepUpPercent}%</div>
+            </div>
+            <input type="range" min="1" max="25" step="1" value={stepUpPercent} onChange={(e) => setStepUpPercent(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Period (Years)</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{years} Years</div>
+            </div>
+            <input type="range" min="1" max="30" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={250} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+               <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Return</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{expectedReturn}%</div>
+            </div>
+            <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
         </div>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Initial Monthly SIP</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(initialSip)}</div>
-          </div>
-          <input type="range" min="1000" max="200000" step="1000" value={initialSip} onChange={(e) => setInitialSip(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={150} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Annual Step-Up</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{stepUpPercent}%</div>
-          </div>
-          <input type="range" min="1" max="25" step="1" value={stepUpPercent} onChange={(e) => setStepUpPercent(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Period (Years)</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{years} Years</div>
-          </div>
-          <input type="range" min="1" max="30" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={250} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-             <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Return</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{expectedReturn}%</div>
-          </div>
-          <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent rounded-full blur-[40px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Invested</p>
-              <p className="text-xl sm:text-2xl font-light">{formatCurrency(totalInvested)}</p>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent rounded-full blur-[40px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Invested</p>
+                <p className="text-xl sm:text-2xl font-light">{formatCurrency(totalInvested)}</p>
+              </div>
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Wealth Gained</p>
+                <p className="text-xl sm:text-2xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
+              </div>
             </div>
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Wealth Gained</p>
-              <p className="text-xl sm:text-2xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
+            <div className="pt-8 border-t border-zinc-800 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">Accelerated Future Value</p>
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(futureValue)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
             </div>
-          </div>
-          <div className="pt-8 border-t border-zinc-800 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-500/80 uppercase mb-3">Accelerated Future Value</p>
-            <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none">{formatCurrency(futureValue)}</p>
-          </div>
-        </FadeIn>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
-
 
 const StpToSipCalculatorWidget = () => {
   const [lumpsum, setLumpsum] = useState(1000000);
   const [months, setMonths] = useState(24);
   const [sourceReturn, setSourceReturn] = useState(6);
   const [targetReturn, setTargetReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const sourceMonthlyRate = sourceReturn / 12 / 100;
   const targetMonthlyRate = targetReturn / 12 / 100;
@@ -680,65 +720,87 @@ const StpToSipCalculatorWidget = () => {
   const averageSipEquivalent = totalTransferred / months;
   const wealthCreated = targetCorpus - lumpsum;
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Systematic Transfer Plan",
+      mainHeading: "STP to SIP Architecture",
+      summaryText: `Strategy mapping a parked lumpsum of <strong>${formatCurrency(lumpsum)}</strong> in a source fund (yielding ${sourceReturn}% p.a.) transferring into a target fund (yielding ${targetReturn}% p.a.) over <strong>${months} months</strong>.`,
+      primaryMetric: { label: "Projected Target Corpus", value: formatCurrency(targetCorpus) },
+      secondaryMetrics: [
+        { label: "Sustainable Monthly STP", value: formatCurrency(sustainableMonthlyStp) },
+        { label: "Net Gain over Parked Capital", value: `+${formatCurrency(wealthCreated)}`, success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-cyan-50 border border-cyan-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-cyan-900 font-medium flex items-start gap-3">
-             <RefreshCw className="w-5 h-5 text-cyan-600 shrink-0 mt-0.5 animate-spin [animation-duration:3s]" />
-             STP to SIP Planner: Start with a lumpsum, transfer it systematically, and see the average SIP you can comfortably create over time.
-          </p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
+               <RefreshCw className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-spin [animation-duration:3s]" />
+               STP to SIP Planner: Start with a lumpsum, transfer it systematically, and see the average SIP you can comfortably create over time.
+            </p>
+          </div>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Lumpsum Parked</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(lumpsum)}</div>
+            </div>
+            <input type="range" min="100000" max="10000000" step="50000" value={lumpsum} onChange={(e) => setLumpsum(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={150} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">STP Period</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{months} Months</div>
+            </div>
+            <input type="range" min="6" max="120" step="1" value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Source Fund Return</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{sourceReturn}%</div>
+            </div>
+            <input type="range" min="3" max="10" step="0.5" value={sourceReturn} onChange={(e) => setSourceReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={250} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+               <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Target Fund Return</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{targetReturn}%</div>
+            </div>
+            <input type="range" min="6" max="18" step="0.5" value={targetReturn} onChange={(e) => setTargetReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
         </div>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Lumpsum Parked</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(lumpsum)}</div>
-          </div>
-          <input type="range" min="100000" max="10000000" step="50000" value={lumpsum} onChange={(e) => setLumpsum(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-cyan-600" />
-        </FadeIn>
-        <FadeIn delay={150} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">STP Period</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{months} Months</div>
-          </div>
-          <input type="range" min="6" max="120" step="1" value={months} onChange={(e) => setMonths(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-cyan-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Source Fund Return</label>
-            <div className="text-xl sm:text-2xl font-light text-cyan-600 bg-cyan-50 px-4 py-2 rounded-xl border border-cyan-200 w-full sm:w-auto shadow-sm">{sourceReturn}%</div>
-          </div>
-          <input type="range" min="3" max="10" step="0.5" value={sourceReturn} onChange={(e) => setSourceReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-cyan-600" />
-        </FadeIn>
-        <FadeIn delay={250} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-             <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Target Fund Return</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{targetReturn}%</div>
-          </div>
-          <input type="range" min="6" max="18" step="0.5" value={targetReturn} onChange={(e) => setTargetReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={300} direction="zoom" className="bg-cyan-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[260px] h-[260px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-cyan-500/20 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-cyan-200 uppercase mb-1">Sustainable Monthly STP</p>
-              <p className="text-2xl sm:text-3xl font-light text-cyan-300">{formatCurrency(sustainableMonthlyStp)}</p>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[260px] h-[260px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Sustainable Monthly STP</p>
+                <p className="text-2xl sm:text-3xl font-light text-emerald-300">{formatCurrency(sustainableMonthlyStp)}</p>
+              </div>
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Average SIP Equivalent</p>
+                <p className="text-xl sm:text-2xl font-light">{formatCurrency(averageSipEquivalent)}</p>
+              </div>
             </div>
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-cyan-200 uppercase mb-1">Average SIP Equivalent</p>
-              <p className="text-xl sm:text-2xl font-light">{formatCurrency(averageSipEquivalent)}</p>
+            <div className="pt-8 border-t border-zinc-800 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">Projected Target Corpus</p>
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(targetCorpus)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
             </div>
-          </div>
-          <div className="pt-8 border-t border-cyan-900/60 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-cyan-300 uppercase mb-3">Projected Target Corpus</p>
-            <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none mb-5">{formatCurrency(targetCorpus)}</p>
-            <p className="text-xs text-emerald-300 font-medium bg-emerald-900/30 inline-block px-4 py-2 rounded-lg border border-emerald-500/20">Net gain over parked capital: {formatCurrency(wealthCreated)}</p>
-          </div>
-        </FadeIn>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -748,6 +810,7 @@ const EmiMatchSipWidget = () => {
   const [tenureYears, setTenureYears] = useState(3);
   const [loanInterest, setLoanInterest] = useState(10);
   const [sipReturn, setSipReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const loanAmount = Math.max(assetCost - downPayment, 0);
   const n = tenureYears * 12;
@@ -763,78 +826,98 @@ const EmiMatchSipWidget = () => {
     : emi * (((Math.pow(1 + sipRate, n) - 1) / sipRate) * (1 + sipRate));
   const decisionGap = sipFutureValue - assetCost;
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "EMI vs SIP Comparison",
+      mainHeading: "Purchase Opportunity Cost",
+      summaryText: `Analysis of a ₹${assetCost.toLocaleString('en-IN')} purchase financed over ${tenureYears} years vs. investing the equivalent EMI of ${formatCurrency(emi)} in the market.`,
+      primaryMetric: { label: "If EMI amount were invested", value: formatCurrency(sipFutureValue) },
+      secondaryMetrics: [
+        { label: "Total Bank Outflow (Cost)", value: formatCurrency(totalBankOutflow) },
+        { label: "Net difference vs asset cost", value: formatCurrency(decisionGap), success: decisionGap >= 0 }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-violet-50 border border-violet-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-violet-900 font-medium flex items-start gap-3">
-             <Activity className="w-5 h-5 text-violet-600 shrink-0 mt-0.5 animate-pulse" />
-             EMI Match SIP: For purchases like a bike, compare the EMI you would pay versus investing the same monthly amount instead.
-          </p>
-        </div>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Asset Cost</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(assetCost)}</div>
-          </div>
-          <input type="range" min="50000" max="5000000" step="10000" value={assetCost} onChange={(e) => setAssetCost(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-violet-600" />
-        </FadeIn>
-        <FadeIn delay={150} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Down Payment</label>
-            <div className="text-xl sm:text-2xl font-light text-violet-600 bg-violet-50 px-4 py-2 rounded-xl border border-violet-200 w-full sm:w-auto shadow-sm">{formatCurrency(downPayment)}</div>
-          </div>
-          <input type="range" min="0" max={assetCost} step="10000" value={downPayment} onChange={(e) => setDownPayment(Math.min(Number(e.target.value), assetCost))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-violet-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Tenure</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{tenureYears} Years</div>
-          </div>
-          <input type="range" min="1" max="7" step="1" value={tenureYears} onChange={(e) => setTenureYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-violet-600" />
-        </FadeIn>
-        <FadeIn delay={250} direction="left">
-          <div className="grid sm:grid-cols-2 gap-6">
-            <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-                <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Interest</label>
-                <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
-              </div>
-              <input type="range" min="6" max="20" step="0.5" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </div>
-            <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-                <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">SIP Return</label>
-                <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{sipReturn}%</div>
-              </div>
-              <input type="range" min="6" max="18" step="0.5" value={sipReturn} onChange={(e) => setSipReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </div>
-          </div>
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={300} direction="zoom" className="bg-violet-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[260px] h-[260px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-violet-500/20 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-violet-200 uppercase mb-1">Monthly EMI</p>
-              <p className="text-2xl sm:text-3xl font-light text-violet-300">{formatCurrency(emi)}</p>
-            </div>
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-violet-200 uppercase mb-1">Total Bank Outflow</p>
-              <p className="text-xl sm:text-2xl font-light">{formatCurrency(totalBankOutflow)}</p>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-violet-900/60 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-violet-300 uppercase mb-3">If EMI amount were invested instead</p>
-            <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none mb-5">{formatCurrency(sipFutureValue)}</p>
-            <p className={`text-xs font-medium inline-block px-4 py-2 rounded-lg border ${decisionGap >= 0 ? 'text-emerald-300 bg-emerald-900/30 border-emerald-500/20' : 'text-emerald-300 bg-emerald-900/30 border-emerald-500/20'}`}>
-              Net difference vs asset cost: {formatCurrency(decisionGap)}
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
+               <Activity className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
+               EMI Match SIP: For purchases like a bike, compare the EMI you would pay versus investing the same monthly amount instead.
             </p>
           </div>
-        </FadeIn>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Asset Cost</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(assetCost)}</div>
+            </div>
+            <input type="range" min="50000" max="5000000" step="10000" value={assetCost} onChange={(e) => setAssetCost(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={150} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Down Payment</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{formatCurrency(downPayment)}</div>
+            </div>
+            <input type="range" min="0" max={assetCost} step="10000" value={downPayment} onChange={(e) => setDownPayment(Math.min(Number(e.target.value), assetCost))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Tenure</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{tenureYears} Years</div>
+            </div>
+            <input type="range" min="1" max="7" step="1" value={tenureYears} onChange={(e) => setTenureYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={250} direction="left">
+            <div className="grid sm:grid-cols-2 gap-6">
+              <div>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+                  <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Interest</label>
+                  <div className="text-xl sm:text-2xl font-light text-zinc-800 bg-zinc-100 px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
+                </div>
+                <input type="range" min="6" max="20" step="0.5" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800" />
+              </div>
+              <div>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+                  <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">SIP Return</label>
+                  <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{sipReturn}%</div>
+                </div>
+                <input type="range" min="6" max="18" step="0.5" value={sipReturn} onChange={(e) => setSipReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[260px] h-[260px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Monthly EMI</p>
+                <p className="text-2xl sm:text-3xl font-light text-white">{formatCurrency(emi)}</p>
+              </div>
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Bank Outflow</p>
+                <p className="text-xl sm:text-2xl font-light">{formatCurrency(totalBankOutflow)}</p>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-zinc-800 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">If EMI amount were invested instead</p>
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-emerald-400 tracking-tight leading-none mb-8">{formatCurrency(sipFutureValue)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -843,6 +926,7 @@ const EmiVsSipCalculatorWidget = () => {
   const [tenureYears, setTenureYears] = useState(15);
   const [loanInterest, setLoanInterest] = useState(8.5);
   const [marketReturn, setMarketReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const ratePerMonth = loanInterest / 12 / 100;
   const totalMonths = tenureYears * 12;
@@ -854,64 +938,86 @@ const EmiVsSipCalculatorWidget = () => {
   const projectedWealth = emi * ((Math.pow(1 + sipRatePerMonth, totalMonths) - 1) / sipRatePerMonth) * (1 + sipRatePerMonth);
   const wealthLost = projectedWealth - totalPaidToBank;
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Debt vs Equity Analysis",
+      mainHeading: "Opportunity Cost of Debt",
+      summaryText: `Analysis showing the wealth forfeited by paying an EMI of ${formatCurrency(emi)} over ${tenureYears} years for a ₹${loanAmount.toLocaleString('en-IN')} loan, versus investing the same amount.`,
+      primaryMetric: { label: "Projected Wealth (If Invested)", value: formatCurrency(projectedWealth) },
+      secondaryMetrics: [
+        { label: "Total Paid to Bank", value: formatCurrency(totalPaidToBank) },
+        { label: "Total Opportunity Cost", value: formatCurrency(wealthLost), success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
-            <PieChart className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
-            The Cost of Debt: See the exact wealth you forfeit when you choose to pay an EMI instead of investing it.
-          </p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-zinc-100 border border-zinc-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-zinc-900 font-medium flex items-start gap-3">
+              <PieChart className="w-5 h-5 text-zinc-800 shrink-0 mt-0.5 animate-pulse" />
+              The Cost of Debt: See the exact wealth you forfeit when you choose to pay an EMI instead of investing it.
+            </p>
+          </div>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Amount</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(loanAmount)}</div>
+            </div>
+            <input type="range" min="100000" max="50000000" step="100000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800" />
+          </FadeIn>
+          <FadeIn delay={150} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Tenure</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{tenureYears} Years</div>
+            </div>
+            <input type="range" min="1" max="30" step="1" value={tenureYears} onChange={(e) => setTenureYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Interest Rate</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-800 bg-zinc-100 px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
+            </div>
+            <input type="range" min="5" max="20" step="0.1" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800" />
+          </FadeIn>
+          <FadeIn delay={250} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+               <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Potential Market Return</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{marketReturn}%</div>
+            </div>
+            <input type="range" min="5" max="25" step="0.5" value={marketReturn} onChange={(e) => setMarketReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
         </div>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Amount</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(loanAmount)}</div>
-          </div>
-          <input type="range" min="100000" max="50000000" step="100000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={150} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Tenure</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{tenureYears} Years</div>
-          </div>
-          <input type="range" min="1" max="30" step="1" value={tenureYears} onChange={(e) => setTenureYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Interest Rate</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
-          </div>
-          <input type="range" min="5" max="20" step="0.1" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={250} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-             <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Potential Market Return</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{marketReturn}%</div>
-          </div>
-          <input type="range" min="5" max="25" step="0.5" value={marketReturn} onChange={(e) => setMarketReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Your Monthly EMI</p>
-              <p className="text-2xl sm:text-3xl font-light text-emerald-400">{formatCurrency(emi)}</p>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Your Monthly EMI</p>
+                <p className="text-2xl sm:text-3xl font-light text-zinc-500">{formatCurrency(emi)}</p>
+              </div>
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Paid to Bank</p>
+                <p className="text-xl sm:text-2xl font-light text-zinc-300">{formatCurrency(totalPaidToBank)} <span className="text-[10px] sm:text-xs text-zinc-500 block sm:inline sm:ml-2">({formatCurrency(totalInterestPaid)} interest)</span></p>
+              </div>
             </div>
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Paid to Bank</p>
-              <p className="text-xl sm:text-2xl font-light text-zinc-300">{formatCurrency(totalPaidToBank)} <span className="text-[10px] sm:text-xs text-emerald-400 block sm:inline sm:ml-2">({formatCurrency(totalInterestPaid)} interest)</span></p>
+            <div className="pt-8 border-t border-zinc-800 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-500 uppercase mb-3">If invested in SIP instead:</p>
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-emerald-400 tracking-tight leading-none mb-8">{formatCurrency(projectedWealth)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
             </div>
-          </div>
-          <div className="pt-8 border-t border-zinc-800 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-500 uppercase mb-3">If invested in SIP instead:</p>
-            <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-emerald-400 tracking-tight leading-none mb-5">{formatCurrency(projectedWealth)}</p>
-            <p className="text-xs text-emerald-500 font-medium bg-emerald-900/30 inline-block px-4 py-2 rounded-lg border border-emerald-500/20">Opportunity Cost: {formatCurrency(wealthLost)}</p>
-          </div>
-        </FadeIn>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -922,6 +1028,7 @@ const ExtraEmiCalculatorWidget = () => {
   const [currentRate, setCurrentRate] = useState(7.50);
   const [extraEmisPerYear, setExtraEmisPerYear] = useState(4);
   const [extraEmiAmount, setExtraEmiAmount] = useState(104000);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const rOrg = originalRate / 12 / 100;
   const nOrg = originalTenure * 12;
@@ -975,110 +1082,133 @@ const ExtraEmiCalculatorWidget = () => {
   const safeTime = (val) => val > 0 ? val : 0;
   const safeMoney = (val) => val > 0 ? val : 0;
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "EMI Prepayment Strategy",
+      mainHeading: "Loan Acceleration Plan",
+      summaryText: `By maintaining your original EMI after an interest rate drop to ${currentRate}% and adding ₹${extraEmiAmount.toLocaleString('en-IN')} as an extra yearly payment, you drastically reduce your loan lifespan.`,
+      primaryMetric: { label: "Total Time Saved", value: formatYM(safeTime(totalSavedTime)) },
+      secondaryMetrics: [
+        { label: "Original Tenure", value: formatYM(nOrg) },
+        { label: "Total Money Saved", value: formatCurrency(safeMoney(totalSavedMoney)), success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
-             <ChevronsDown className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-bounce" />
-             Prepayment Accelerator: See exactly how much time and interest you save by maintaining your original EMI after a rate drop, combined with extra yearly payments.
-          </p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
+               <ChevronsDown className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-bounce" />
+               Prepayment Accelerator: See exactly how much time and interest you save by maintaining your original EMI after a rate drop, combined with extra yearly payments.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <FadeIn delay={100} direction="left" className="space-y-3">
+                <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Loan Amount</span> <span className="text-zinc-900 font-bold">{formatShortAmt(loanAmount)}</span></label>
+                <input type="range" min="1000000" max="50000000" step="500000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </FadeIn>
+              <FadeIn delay={150} direction="left" className="space-y-3">
+                <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Original Tenure</span> <span className="text-zinc-900 font-bold">{originalTenure} Years</span></label>
+                <input type="range" min="5" max="30" step="1" value={originalTenure} onChange={(e) => setOriginalTenure(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </FadeIn>
+              <FadeIn delay={200} direction="left" className="space-y-3">
+                <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Original Rate</span> <span className="text-zinc-900 font-bold">{originalRate}%</span></label>
+                <input type="range" min="6" max="15" step="0.1" value={originalRate} onChange={(e) => setOriginalRate(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </FadeIn>
+              <FadeIn delay={250} direction="left" className="space-y-3">
+                <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Current Rate</span> <span className="text-emerald-600 font-bold">{currentRate}%</span></label>
+                <input type="range" min="6" max="15" step="0.1" value={currentRate} onChange={(e) => setCurrentRate(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </FadeIn>
+          </div>
+
+          <div className="pt-6 border-t border-zinc-100">
+              <FadeIn delay={300} direction="left" className="mb-6 space-y-3">
+                <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Extra EMIs per year</span> <span className="text-zinc-900 font-bold">{extraEmisPerYear}</span></label>
+                <input type="range" min="0" max="12" step="1" value={extraEmisPerYear} onChange={(e) => setExtraEmisPerYear(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </FadeIn>
+              <FadeIn delay={350} direction="left" className="space-y-3">
+                <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Extra EMI amount (₹)</span> <span className="text-zinc-900 font-bold">{formatCurrency(extraEmiAmount)}</span></label>
+                <input type="range" min="10000" max="500000" step="10000" value={extraEmiAmount} onChange={(e) => setExtraEmiAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+              </FadeIn>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FadeIn delay={100} direction="left" className="space-y-3">
-              <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Loan Amount</span> <span className="text-zinc-900 font-bold">{formatShortAmt(loanAmount)}</span></label>
-              <input type="range" min="1000000" max="50000000" step="500000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </FadeIn>
-            <FadeIn delay={150} direction="left" className="space-y-3">
-              <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Original Tenure</span> <span className="text-zinc-900 font-bold">{originalTenure} Years</span></label>
-              <input type="range" min="5" max="30" step="1" value={originalTenure} onChange={(e) => setOriginalTenure(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </FadeIn>
-            <FadeIn delay={200} direction="left" className="space-y-3">
-              <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Original Rate</span> <span className="text-zinc-900 font-bold">{originalRate}%</span></label>
-              <input type="range" min="6" max="15" step="0.1" value={originalRate} onChange={(e) => setOriginalRate(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </FadeIn>
-            <FadeIn delay={250} direction="left" className="space-y-3">
-              <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Current Rate</span> <span className="text-emerald-600 font-bold">{currentRate}%</span></label>
-              <input type="range" min="6" max="15" step="0.1" value={currentRate} onChange={(e) => setCurrentRate(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </FadeIn>
-        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={400} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[250px] h-[250px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            
+            <div className="space-y-6 relative z-10 mb-8">
+              <div className="grid grid-cols-2 gap-4 border-b border-emerald-800/50 pb-6">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                  <p className="text-[9px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Loan amount</p>
+                  <p className="text-base font-medium">{formatShortAmt(loanAmount)}</p>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                  <p className="text-[9px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Monthly EMI</p>
+                  <p className="text-base font-medium">{formatCurrency(originalEMI)}</p>
+                </div>
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                  <p className="text-[9px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Original Rate</p>
+                  <p className="text-base font-medium">{originalRate}%</p>
+                </div>
+                 <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                  <p className="text-[9px] font-medium tracking-widest text-emerald-300 uppercase mb-1">Current Rate</p>
+                  <p className="text-base font-medium text-emerald-400">{currentRate}%</p>
+                </div>
+              </div>
 
-        <div className="pt-6 border-t border-zinc-100">
-            <FadeIn delay={300} direction="left" className="mb-6 space-y-3">
-              <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Extra EMIs per year</span> <span className="text-zinc-900 font-bold">{extraEmisPerYear}</span></label>
-              <input type="range" min="0" max="12" step="1" value={extraEmisPerYear} onChange={(e) => setExtraEmisPerYear(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </FadeIn>
-            <FadeIn delay={350} direction="left" className="space-y-3">
-              <label className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-500 uppercase flex justify-between"><span>Extra EMI amount (₹)</span> <span className="text-zinc-900 font-bold">{formatCurrency(extraEmiAmount)}</span></label>
-              <input type="range" min="10000" max="500000" step="10000" value={extraEmiAmount} onChange={(e) => setExtraEmiAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-            </FadeIn>
+              <div className="bg-black/20 rounded-2xl p-5 border border-white/5">
+                 <p className="text-[10px] font-medium tracking-widest text-emerald-300 uppercase mb-4">Tenure comparison</p>
+                 <div className="grid grid-cols-3 gap-3">
+                    <div>
+                       <p className="text-[9px] text-zinc-400 mb-1">At {originalRate}% (org)</p>
+                       <p className="text-sm font-semibold">{formatYM(nOrg)}</p>
+                    </div>
+                    <div>
+                       <p className="text-[9px] text-zinc-400 mb-1">At {currentRate}% (same EMI)</p>
+                       <p className="text-sm font-semibold text-emerald-400">{formatYM(monthsRateDrop)}</p>
+                    </div>
+                    <div>
+                       <p className="text-[9px] text-zinc-400 mb-1">At {currentRate}% + prepay</p>
+                       <p className="text-sm font-semibold text-emerald-400">{formatYM(mPrepay)}</p>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mt-6">
+                 <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                    <p className="text-[8px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Saved by rate drop</p>
+                    <p className="text-sm font-bold text-emerald-400 mb-1">{formatYM(safeTime(savedTimeRateDrop))}</p>
+                    <p className="text-[9px] text-zinc-400">{formatShortAmt(safeMoney(savedMoneyRateDrop))}</p>
+                 </div>
+                 <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                    <p className="text-[8px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Saved by prepay</p>
+                    <p className="text-sm font-bold text-emerald-400 mb-1">{formatYM(safeTime(savedTimePrepay))}</p>
+                    <p className="text-[9px] text-zinc-400">{formatShortAmt(safeMoney(savedMoneyPrepay))}</p>
+                 </div>
+                 <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                    <p className="text-[8px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Total saved</p>
+                    <p className="text-sm font-bold text-white mb-1">{formatYM(safeTime(totalSavedTime))}</p>
+                    <p className="text-[9px] text-emerald-400 font-medium">{formatShortAmt(safeMoney(totalSavedMoney))}</p>
+                 </div>
+              </div>
+            </div>
+
+            <button onClick={handleDownloadInitiate} className="w-full mt-6 py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1 relative z-10">
+              <Download className="w-4 h-4 animate-bounce" />
+              <span>Download Strategy Report</span>
+            </button>
+          </FadeIn>
         </div>
       </div>
-      
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={400} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[250px] h-[250px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent rounded-full blur-[50px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          
-          <div className="space-y-6 relative z-10 mb-8">
-            <div className="grid grid-cols-2 gap-4 border-b border-emerald-800/50 pb-6">
-              <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                <p className="text-[9px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Loan amount</p>
-                <p className="text-base font-medium">{formatShortAmt(loanAmount)}</p>
-              </div>
-              <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                <p className="text-[9px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Monthly EMI</p>
-                <p className="text-base font-medium">{formatCurrency(originalEMI)}</p>
-              </div>
-              <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                <p className="text-[9px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Original Rate</p>
-                <p className="text-base font-medium">{originalRate}%</p>
-              </div>
-               <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
-                <p className="text-[9px] font-medium tracking-widest text-emerald-300 uppercase mb-1">Current Rate</p>
-                <p className="text-base font-medium text-emerald-400">{currentRate}%</p>
-              </div>
-            </div>
-
-            <div className="bg-black/20 rounded-2xl p-5 border border-white/5">
-               <p className="text-[10px] font-medium tracking-widest text-emerald-300 uppercase mb-4">Tenure comparison</p>
-               <div className="grid grid-cols-3 gap-3">
-                  <div>
-                     <p className="text-[9px] text-zinc-400 mb-1">At {originalRate}% (org)</p>
-                     <p className="text-sm font-semibold">{formatYM(nOrg)}</p>
-                  </div>
-                  <div>
-                     <p className="text-[9px] text-zinc-400 mb-1">At {currentRate}% (same EMI)</p>
-                     <p className="text-sm font-semibold text-emerald-400">{formatYM(monthsRateDrop)}</p>
-                  </div>
-                  <div>
-                     <p className="text-[9px] text-zinc-400 mb-1">At {currentRate}% + prepay</p>
-                     <p className="text-sm font-semibold text-emerald-400">{formatYM(mPrepay)}</p>
-                  </div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 mt-6">
-               <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                  <p className="text-[8px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Saved by rate drop</p>
-                  <p className="text-sm font-bold text-emerald-400 mb-1">{formatYM(safeTime(savedTimeRateDrop))}</p>
-                  <p className="text-[9px] text-zinc-400">{formatShortAmt(safeMoney(savedMoneyRateDrop))}</p>
-               </div>
-               <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                  <p className="text-[8px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Saved by prepay</p>
-                  <p className="text-sm font-bold text-emerald-400 mb-1">{formatYM(safeTime(savedTimePrepay))}</p>
-                  <p className="text-[9px] text-zinc-400">{formatShortAmt(safeMoney(savedMoneyPrepay))}</p>
-               </div>
-               <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
-                  <p className="text-[8px] font-medium tracking-widest text-emerald-200 uppercase mb-1">Total saved</p>
-                  <p className="text-sm font-bold text-white mb-1">{formatYM(safeTime(totalSavedTime))}</p>
-                  <p className="text-[9px] text-emerald-400 font-medium">{formatShortAmt(safeMoney(totalSavedMoney))}</p>
-               </div>
-            </div>
-          </div>
-        </FadeIn>
-      </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -1088,6 +1218,7 @@ const SmartEmiCalculatorWidget = () => {
   const [loanInterest, setLoanInterest] = useState(8.5);
   const [sipReturn, setSipReturn] = useState(12);
   const [recoveryMode, setRecoveryMode] = useState('interest');
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const r = loanInterest / 12 / 100;
   const n = tenureYears * 12;
@@ -1102,90 +1233,113 @@ const SmartEmiCalculatorWidget = () => {
   const sipPercentageOfEmi = emi > 0 ? ((requiredSip / emi) * 100).toFixed(1) : '0.0';
   const recoveryLabel = recoveryMode === 'interest' ? 'interest' : recoveryMode === 'principal' ? 'principal' : 'principal + interest';
 
-  return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
-             <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
-             Loan Cost Recovery: Build a parallel SIP that can recover just your interest, your principal, or your entire principal plus interest outflow.
-          </p>
-        </div>
-        <FadeIn delay={75} direction="left">
-          <div className="flex flex-wrap gap-3">
-            {[
-              { id: 'interest', label: 'Interest Only' },
-              { id: 'principal', label: 'Principal Only' },
-              { id: 'total', label: 'Principal + Interest' },
-            ].map((option) => (
-              <button
-                key={option.id}
-                onClick={() => setRecoveryMode(option.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 border ${
-                  recoveryMode === option.id
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20'
-                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </FadeIn>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Amount</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(loanAmount)}</div>
-          </div>
-          <input type="range" min="500000" max="50000000" step="100000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={150} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Tenure</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{tenureYears} Years</div>
-          </div>
-          <input type="range" min="5" max="30" step="1" value={tenureYears} onChange={(e) => setTenureYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Home Loan Interest</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
-          </div>
-          <input type="range" min="6" max="15" step="0.1" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={250} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-             <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected SIP Return</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{sipReturn}%</div>
-          </div>
-          <input type="range" min="8" max="25" step="0.5" value={sipReturn} onChange={(e) => setSipReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={300} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          
-          <div className="space-y-6 relative z-10 mb-8">
-            <div className="bg-white/5 p-5 rounded-2xl backdrop-blur-sm border border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase">Your EMI</p>
-              <p className="text-xl font-medium text-white">{formatCurrency(emi)}</p>
-            </div>
-            <div className="bg-emerald-500/10 p-5 rounded-2xl backdrop-blur-sm border border-emerald-500/20 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-300 uppercase">Target Corpus</p>
-              <p className="text-xl font-medium text-emerald-400">{formatCurrency(targetCorpus)}</p>
-            </div>
-          </div>
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Zero-Cost EMI Plan",
+      mainHeading: "Loan Cost Recovery Strategy",
+      summaryText: `Strategy showing how a parallel SIP of ${formatCurrency(requiredSip)} alongside your EMI will fully recover your ${recoveryLabel} over ${tenureYears} years.`,
+      primaryMetric: { label: `Required SIP (To Recover ${recoveryLabel})`, value: formatCurrency(requiredSip) },
+      secondaryMetrics: [
+        { label: "Your Monthly EMI", value: formatCurrency(emi) },
+        { label: "Target Corpus to Recover", value: formatCurrency(targetCorpus), success: true }
+      ]
+    }, leadData);
+  };
 
-          <div className="pt-8 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400 uppercase mb-4">Required Monthly SIP to recover {recoveryLabel}</p>
-            <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(requiredSip)}</p>
-            <div className="inline-flex items-center gap-3 bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 text-sm font-medium px-5 py-3 rounded-xl shadow-inner">
-              <Sparkles className="w-5 h-5 text-emerald-400 animate-pulse" /> That's just {sipPercentageOfEmi}% of your EMI amount!
-            </div>
+  return (
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-green-50 border border-green-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-green-900 font-medium flex items-start gap-3">
+               <Sparkles className="w-5 h-5 text-green-600 shrink-0 mt-0.5 animate-pulse" />
+               Loan Cost Recovery: Build a parallel SIP that can recover just your interest, your principal, or your entire principal plus interest outflow.
+            </p>
           </div>
-        </FadeIn>
+          <FadeIn delay={75} direction="left">
+            <div className="flex flex-wrap gap-3">
+              {[
+                { id: 'interest', label: 'Interest Only' },
+                { id: 'principal', label: 'Principal Only' },
+                { id: 'total', label: 'Principal + Interest' },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setRecoveryMode(option.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 border ${
+                    recoveryMode === option.id
+                      ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/20'
+                      : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </FadeIn>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Amount</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(loanAmount)}</div>
+            </div>
+            <input type="range" min="500000" max="50000000" step="100000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+          <FadeIn delay={150} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Tenure</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{tenureYears} Years</div>
+            </div>
+            <input type="range" min="5" max="30" step="1" value={tenureYears} onChange={(e) => setTenureYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Home Loan Interest</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
+            </div>
+            <input type="range" min="6" max="15" step="0.1" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+          <FadeIn delay={250} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+               <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected SIP Return</label>
+              <div className="text-xl sm:text-2xl font-light text-green-600 bg-green-50 px-4 py-2 rounded-xl border border-green-200 w-full sm:w-auto shadow-sm">{sipReturn}%</div>
+            </div>
+            <input type="range" min="8" max="25" step="0.5" value={sipReturn} onChange={(e) => setSipReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={300} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-green-500/20 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            
+            <div className="space-y-6 relative z-10 mb-8">
+              <div className="bg-white/5 p-5 rounded-2xl backdrop-blur-sm border border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase">Your EMI</p>
+                <p className="text-xl font-medium text-white">{formatCurrency(emi)}</p>
+              </div>
+              <div className="bg-zinc-500/10 p-5 rounded-2xl backdrop-blur-sm border border-zinc-500/20 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase">Target Corpus</p>
+                <p className="text-xl font-medium text-zinc-300">{formatCurrency(targetCorpus)}</p>
+              </div>
+            </div>
+
+            <div className="pt-8 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-green-400 uppercase mb-4">Required Monthly SIP to recover {recoveryLabel}</p>
+              <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(requiredSip)}</p>
+              <div className="inline-flex items-center gap-3 bg-green-900/30 border border-green-500/20 text-green-300 text-sm font-medium px-5 py-3 rounded-xl shadow-inner mb-8 w-full">
+                <Sparkles className="w-5 h-5 text-green-400 animate-pulse shrink-0" /> That's just {sipPercentageOfEmi}% of your EMI amount!
+              </div>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -1196,6 +1350,7 @@ const EarlyClosureWidget = () => {
   const [loanInterest, setLoanInterest] = useState(8.5);
   const [sipReturn, setSipReturn] = useState(12);
   const [closureMode, setClosureMode] = useState('foreclose');
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   useEffect(() => {
     if (targetTenure >= originalTenure) {
@@ -1228,106 +1383,129 @@ const EarlyClosureWidget = () => {
   const yearsSaved = originalTenure - targetTenure;
   const targetLabel = closureMode === 'foreclose' ? 'Loan Balance' : closureMode === 'interest' ? 'Interest Paid Till Closure' : 'Principal + Interest Neutralizer';
 
-  return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
-             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
-             The Debt Destroyer: Calculate the exact parallel SIP required to build a corpus large enough to foreclose your home loan years ahead of schedule.
-          </p>
-        </div>
-        <FadeIn delay={75} direction="left">
-          <div className="flex flex-wrap gap-3">
-            {[
-              { id: 'foreclose', label: 'Foreclose Balance' },
-              { id: 'interest', label: 'Recover Interest' },
-              { id: 'total', label: 'Balance + Interest' },
-            ].map((option) => (
-              <button
-                key={option.id}
-                onClick={() => setClosureMode(option.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 border ${
-                  closureMode === option.id
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20'
-                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </FadeIn>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Amount</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(loanAmount)}</div>
-          </div>
-          <input type="range" min="500000" max="50000000" step="100000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={150} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Original Loan Tenure</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{originalTenure} Years</div>
-          </div>
-          <input type="range" min="5" max="30" step="1" value={originalTenure} onChange={(e) => setOriginalTenure(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Target Closure Time</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{targetTenure} Years</div>
-          </div>
-          <input type="range" min="1" max={Math.max(originalTenure - 1, 1)} step="1" value={targetTenure} onChange={(e) => setTargetTenure(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={250} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Interest Rate</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
-          </div>
-          <input type="range" min="6" max="15" step="0.1" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={300} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-             <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected SIP Return</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{sipReturn}%</div>
-          </div>
-          <input type="range" min="8" max="25" step="0.5" value={sipReturn} onChange={(e) => setSipReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={350} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          
-          <div className="space-y-6 relative z-10 mb-8">
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase">Your Regular EMI</p>
-              <p className="text-xl font-medium text-white">{formatCurrency(emi)}</p>
-            </div>
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <div>
-                 <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase">{targetLabel}</p>
-                 <p className="text-[9px] text-zinc-400 mt-0.5">Corpus needed at year {targetTenure}</p>
-              </div>
-              <p className="text-xl font-medium text-emerald-400">{formatCurrency(targetCorpus)}</p>
-            </div>
-          </div>
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Early Closure Strategy",
+      mainHeading: "Debt Destroyer Blueprint",
+      summaryText: `By running a parallel SIP of ${formatCurrency(requiredSip)}, you will build the required corpus of ${formatCurrency(targetCorpus)} to close your loan in ${targetTenure} years instead of ${originalTenure} years.`,
+      primaryMetric: { label: "Required Monthly SIP", value: formatCurrency(requiredSip) },
+      secondaryMetrics: [
+        { label: "Years of EMIs Saved", value: yearsSaved.toString() },
+        { label: "Total Wealth Saved", value: formatCurrency(totalSavings), success: true }
+      ]
+    }, leadData);
+  };
 
-          <div className="pt-6 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400 uppercase mb-3">Required Monthly SIP to close early</p>
-            <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(requiredSip)}</p>
+  return (
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
+               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
+               The Debt Destroyer: Calculate the exact parallel SIP required to build a corpus large enough to foreclose your home loan years ahead of schedule.
+            </p>
+          </div>
+          <FadeIn delay={75} direction="left">
+            <div className="flex flex-wrap gap-3">
+              {[
+                { id: 'foreclose', label: 'Foreclose Balance' },
+                { id: 'interest', label: 'Recover Interest' },
+                { id: 'total', label: 'Balance + Interest' },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setClosureMode(option.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-300 border ${
+                    closureMode === option.id
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20'
+                      : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </FadeIn>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Amount</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(loanAmount)}</div>
+            </div>
+            <input type="range" min="500000" max="50000000" step="100000" value={loanAmount} onChange={(e) => setLoanAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={150} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Original Loan Tenure</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{originalTenure} Years</div>
+            </div>
+            <input type="range" min="5" max="30" step="1" value={originalTenure} onChange={(e) => setOriginalTenure(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Target Closure Time</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{targetTenure} Years</div>
+            </div>
+            <input type="range" min="1" max={Math.max(originalTenure - 1, 1)} step="1" value={targetTenure} onChange={(e) => setTargetTenure(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={250} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Loan Interest Rate</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{loanInterest}%</div>
+            </div>
+            <input type="range" min="6" max="15" step="0.1" value={loanInterest} onChange={(e) => setLoanInterest(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={300} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+               <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected SIP Return</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{sipReturn}%</div>
+            </div>
+            <input type="range" min="8" max="25" step="0.5" value={sipReturn} onChange={(e) => setSipReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={350} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
             
-            <div className="flex flex-col gap-3">
-              <div className="inline-flex items-center gap-3 bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 text-sm font-medium px-4 py-3 rounded-xl w-fit">
-                <Activity className="w-4 h-4 shrink-0" /> Save {yearsSaved} years of EMIs
+            <div className="space-y-6 relative z-10 mb-8">
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase">Your Regular EMI</p>
+                <p className="text-xl font-medium text-white">{formatCurrency(emi)}</p>
               </div>
-              <div className="inline-flex items-center gap-3 bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 text-sm font-medium px-4 py-3 rounded-xl w-fit">
-                <Check className="w-4 h-4 shrink-0" /> Wealth Saved: {formatCurrency(totalSavings)}
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <div>
+                   <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase">{targetLabel}</p>
+                   <p className="text-[9px] text-zinc-400 mt-0.5">Corpus needed at year {targetTenure}</p>
+                </div>
+                <p className="text-xl font-medium text-zinc-300">{formatCurrency(targetCorpus)}</p>
               </div>
             </div>
-          </div>
-        </FadeIn>
+
+            <div className="pt-6 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400 uppercase mb-3">Required Monthly SIP</p>
+              <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(requiredSip)}</p>
+              
+              <div className="flex flex-col gap-3 mb-8">
+                <div className="inline-flex items-center gap-3 bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 text-sm font-medium px-4 py-3 rounded-xl w-full">
+                  <Activity className="w-4 h-4 shrink-0" /> Save {yearsSaved} years of EMIs
+                </div>
+                <div className="inline-flex items-center gap-3 bg-green-900/50 border border-green-500/30 text-green-300 text-sm font-medium px-4 py-3 rounded-xl w-full">
+                  <Check className="w-4 h-4 shrink-0" /> Wealth Saved: {formatCurrency(totalSavings)}
+                </div>
+              </div>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -1335,59 +1513,83 @@ const FireCalculatorWidget = () => {
   const [monthlyExpenses, setMonthlyExpenses] = useState(80000);
   const [yearsToRetire, setYearsToRetire] = useState(15);
   const [inflation, setInflation] = useState(6);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const currentAnnualExp = monthlyExpenses * 12;
   const futureAnnualExp = currentAnnualExp * Math.pow(1 + inflation / 100, yearsToRetire);
   const requiredCorpus = futureAnnualExp * 30; 
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "F.I.R.E. Trajectory Report",
+      mainHeading: "Early Retirement Blueprint",
+      summaryText: `Based on your current monthly expenses of ${formatCurrency(monthlyExpenses)}, factoring in an inflation rate of ${inflation}%, here is your required target corpus to safely retire in ${yearsToRetire} years.`,
+      primaryMetric: { label: "Target F.I.R.E. Corpus", value: formatCurrency(requiredCorpus) },
+      secondaryMetrics: [
+        { label: "Future Monthly Expense", value: formatCurrency(futureAnnualExp / 12) },
+        { label: "Target Retirement Timeline", value: `${yearsToRetire} Years`, success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-4 shadow-sm">
-          <p className="text-sm text-emerald-900 font-medium flex items-start gap-3">
-             <Map className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 animate-pulse" />
-             Financial Independence, Retire Early. Calculate the exact corpus required to stop working and live purely off your portfolio yields.
-          </p>
-        </div>
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Current Monthly Expenses</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(monthlyExpenses)}</div>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <div className="bg-green-50 border border-green-200 p-5 rounded-2xl mb-4 shadow-sm">
+            <p className="text-sm text-green-900 font-medium flex items-start gap-3">
+               <Map className="w-5 h-5 text-green-600 shrink-0 mt-0.5 animate-pulse" />
+               Financial Independence, Retire Early. Calculate the exact corpus required to stop working and live purely off your portfolio yields.
+            </p>
           </div>
-          <input type="range" min="20000" max="500000" step="5000" value={monthlyExpenses} onChange={(e) => setMonthlyExpenses(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Years to Retirement</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{yearsToRetire} Years</div>
-          </div>
-          <input type="range" min="1" max="40" step="1" value={yearsToRetire} onChange={(e) => setYearsToRetire(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={300} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Inflation</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{inflation}%</div>
-          </div>
-          <input type="range" min="3" max="12" step="0.5" value={inflation} onChange={(e) => setInflation(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={400} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase mb-2">Projected Future Monthly Expense</p>
-              <p className="text-2xl sm:text-3xl font-light text-white">{formatCurrency(futureAnnualExp / 12)}</p>
-              <p className="text-xs text-emerald-300/70 mt-1">Adjusted for {inflation}% inflation</p>
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Current Monthly Expenses</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(monthlyExpenses)}</div>
             </div>
-          </div>
-          <div className="pt-8 border-t border-emerald-800/50 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400 uppercase mb-3">Target F.I.R.E. Corpus</p>
-            <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-4">{formatCurrency(requiredCorpus)}</p>
-          </div>
-        </FadeIn>
+            <input type="range" min="20000" max="500000" step="5000" value={monthlyExpenses} onChange={(e) => setMonthlyExpenses(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Years to Retirement</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{yearsToRetire} Years</div>
+            </div>
+            <input type="range" min="1" max="40" step="1" value={yearsToRetire} onChange={(e) => setYearsToRetire(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+          <FadeIn delay={300} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Inflation</label>
+              <div className="text-xl sm:text-2xl font-light text-green-600 bg-green-50 px-4 py-2 rounded-xl border border-green-200 w-full sm:w-auto shadow-sm">{inflation}%</div>
+            </div>
+            <input type="range" min="3" max="12" step="0.5" value={inflation} onChange={(e) => setInflation(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+          </FadeIn>
+        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={400} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-green-500/20 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-2">Projected Future Monthly Expense</p>
+                <p className="text-2xl sm:text-3xl font-light text-white">{formatCurrency(futureAnnualExp / 12)}</p>
+                <p className="text-xs text-zinc-500 mt-1">Adjusted for {inflation}% inflation</p>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-zinc-800 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-green-400 uppercase mb-3">Target F.I.R.E. Corpus</p>
+              <p className="text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(requiredCorpus)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -1395,54 +1597,78 @@ const LumpsumCalculatorWidget = () => {
   const [lumpsum, setLumpsum] = useState(1000000);
   const [years, setYears] = useState(10);
   const [expectedReturn, setExpectedReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const maturityValue = lumpsum * Math.pow(1 + expectedReturn / 100, years);
   const wealthGained = maturityValue - lumpsum;
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Lumpsum Projection Report",
+      mainHeading: "One-Time Investment Growth",
+      summaryText: `Based on a one-time capital deployment of ${formatCurrency(lumpsum)} held over ${years} years with an expected compounding rate of ${expectedReturn}%.`,
+      primaryMetric: { label: "Projected Future Value", value: formatCurrency(maturityValue) },
+      secondaryMetrics: [
+        { label: "Total Invested Amount", value: formatCurrency(lumpsum) },
+        { label: "Total Wealth Gained", value: `+${formatCurrency(wealthGained)}`, success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">One-time Investment</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(lumpsum)}</div>
-          </div>
-          <input type="range" min="10000" max="50000000" step="10000" value={lumpsum} onChange={(e) => setLumpsum(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Investment Period</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{years} Years</div>
-          </div>
-          <input type="range" min="1" max="40" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={300} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Return (p.a)</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{expectedReturn}%</div>
-          </div>
-          <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={400} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-           <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Invested</p>
-              <p className="text-xl sm:text-2xl font-light">{formatCurrency(lumpsum)}</p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">One-time Investment</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(lumpsum)}</div>
             </div>
-            <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Wealth Gained</p>
-              <p className="text-xl sm:text-2xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
+            <input type="range" min="10000" max="50000000" step="10000" value={lumpsum} onChange={(e) => setLumpsum(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Investment Period</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{years} Years</div>
             </div>
-          </div>
-          <div className="pt-8 border-t border-zinc-800 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-500 uppercase mb-3">Future Value</p>
-            <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none">{formatCurrency(maturityValue)}</p>
-          </div>
-        </FadeIn>
+            <input type="range" min="1" max="40" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={300} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Return (p.a)</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{expectedReturn}%</div>
+            </div>
+            <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={400} direction="zoom" className="bg-zinc-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+             <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Total Invested</p>
+                <p className="text-xl sm:text-2xl font-light">{formatCurrency(lumpsum)}</p>
+              </div>
+              <div className="bg-white/5 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-zinc-400 uppercase mb-1">Wealth Gained</p>
+                <p className="text-xl sm:text-2xl font-light text-emerald-400">+{formatCurrency(wealthGained)}</p>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-zinc-800 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-500 uppercase mb-3">Future Value</p>
+              <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(maturityValue)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -1450,52 +1676,76 @@ const GoalCalculatorWidget = () => {
   const [targetAmount, setTargetAmount] = useState(10000000);
   const [years, setYears] = useState(10);
   const [expectedReturn, setExpectedReturn] = useState(12);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
   const ratePerMonth = expectedReturn / 12 / 100;
   const totalMonths = years * 12;
   const requiredSip = targetAmount / (((Math.pow(1 + ratePerMonth, totalMonths) - 1) / ratePerMonth) * (1 + ratePerMonth));
 
+  const handleDownloadInitiate = () => setIsLeadModalOpen(true);
+  const handleDownloadComplete = (leadData) => {
+    setIsLeadModalOpen(false);
+    generateReport({
+      reportTitle: "Financial Goal Mapping",
+      mainHeading: "Goal Achievement Plan",
+      summaryText: `Mathematical breakdown of the regular investment required to achieve your target milestone of ${formatCurrency(targetAmount)} over ${years} years.`,
+      primaryMetric: { label: "Required Monthly SIP", value: formatCurrency(requiredSip) },
+      secondaryMetrics: [
+        { label: "Target Goal Amount", value: formatCurrency(targetAmount) },
+        { label: "Timeframe to Goal", value: `${years} Years`, success: true }
+      ]
+    }, leadData);
+  };
+
   return (
-    <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
-      <div className="lg:col-span-7 space-y-6 lg:space-y-8">
-        <FadeIn delay={100} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Target Goal Amount</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(targetAmount)}</div>
-          </div>
-          <input type="range" min="100000" max="100000000" step="100000" value={targetAmount} onChange={(e) => setTargetAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={200} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Time to Goal</label>
-            <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{years} Years</div>
-          </div>
-          <input type="range" min="1" max="40" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-        <FadeIn delay={300} direction="left">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
-            <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Return (p.a)</label>
-            <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{expectedReturn}%</div>
-          </div>
-          <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
-        </FadeIn>
-      </div>
-      <div className="lg:col-span-5 group">
-        <FadeIn delay={400} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
-           <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-600/30 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
-          <div className="space-y-6 relative z-10 mb-10">
-            <div className="bg-white/5 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
-              <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase mb-2">To reach your goal of</p>
-              <p className="text-2xl sm:text-3xl font-light text-white">{formatCurrency(targetAmount)}</p>
+    <>
+      <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 animate-in fade-in zoom-in-95 duration-500 text-left">
+        <div className="lg:col-span-7 space-y-6 lg:space-y-8">
+          <FadeIn delay={100} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Target Goal Amount</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{formatCurrency(targetAmount)}</div>
             </div>
-          </div>
-          <div className="pt-8 border-t border-emerald-800/50 relative z-10">
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400 uppercase mb-3">Required Monthly SIP</p>
-            <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none">{formatCurrency(requiredSip)}</p>
-          </div>
-        </FadeIn>
+            <input type="range" min="100000" max="100000000" step="100000" value={targetAmount} onChange={(e) => setTargetAmount(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={200} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Time to Goal</label>
+              <div className="text-xl sm:text-2xl font-light text-zinc-900 bg-white px-4 py-2 rounded-xl border border-zinc-200 w-full sm:w-auto shadow-sm">{years} Years</div>
+            </div>
+            <input type="range" min="1" max="40" step="1" value={years} onChange={(e) => setYears(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+          <FadeIn delay={300} direction="left">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-3">
+              <label className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Expected Return (p.a)</label>
+              <div className="text-xl sm:text-2xl font-light text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 w-full sm:w-auto shadow-sm">{expectedReturn}%</div>
+            </div>
+            <input type="range" min="5" max="25" step="0.5" value={expectedReturn} onChange={(e) => setExpectedReturn(Number(e.target.value))} className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+          </FadeIn>
+        </div>
+        <div className="lg:col-span-5 group">
+          <FadeIn delay={400} direction="zoom" className="bg-emerald-950 text-white p-8 lg:p-10 rounded-[2rem] h-full flex flex-col justify-between relative overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02]">
+             <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent rounded-full blur-[60px] pointer-events-none group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="space-y-6 relative z-10 mb-10">
+              <div className="bg-white/5 p-5 rounded-2xl backdrop-blur-sm border border-white/10">
+                <p className="text-[10px] sm:text-xs font-medium tracking-widest text-emerald-200 uppercase mb-2">To reach your goal of</p>
+                <p className="text-2xl sm:text-3xl font-light text-white">{formatCurrency(targetAmount)}</p>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-emerald-800/50 relative z-10">
+              <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-400 uppercase mb-3">Required Monthly SIP</p>
+              <p className="text-5xl sm:text-6xl md:text-7xl font-light text-white tracking-tight leading-none mb-8">{formatCurrency(requiredSip)}</p>
+              
+              <button onClick={handleDownloadInitiate} className="w-full py-4 text-sm bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:-translate-y-1">
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>Download Strategy Report</span>
+              </button>
+            </div>
+          </FadeIn>
+        </div>
       </div>
-    </div>
+      <LeadCaptureModal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} onDownloadComplete={handleDownloadComplete} />
+    </>
   );
 };
 
@@ -1589,7 +1839,7 @@ const AIAssistantWidget = ({ openContactModal }) => {
 // --- ABOUT PAGE COMPONENT ---
 const AboutPage = ({ setCurrentPage, openContactModal }) => {
   return (
-    <div className="pt-32 pb-10 animate-in fade-in duration-700 text-left bg-emerald-50/30">
+    <div className="pt-32 pb-10 animate-in fade-in duration-700 text-left bg-zinc-50">
       <section className="px-6 sm:px-10 lg:px-16 xl:px-24 w-full max-w-[1800px] mx-auto py-16 lg:py-24">
         <FadeIn direction="down">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tighter text-zinc-950 mb-6 leading-[1.05]">
@@ -1602,11 +1852,11 @@ const AboutPage = ({ setCurrentPage, openContactModal }) => {
         </FadeIn>
       </section>
 
-      <section className="bg-lime-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-24 border-y border-lime-100/50">
+      <section className="bg-emerald-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-24 border-y border-emerald-100/50">
         <div className="max-w-[1800px] mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <FadeIn direction="left">
-            <div className="aspect-square sm:aspect-[4/3] lg:aspect-square bg-white rounded-[2.5rem] p-8 sm:p-12 flex flex-col justify-end relative overflow-hidden group border border-zinc-100 shadow-2xl shadow-zinc-200/50 hover:shadow-lime-200/50 transition-shadow duration-700">
-              <div className="absolute inset-0 bg-gradient-to-tr from-lime-50/50 to-transparent group-hover:scale-105 transition-transform duration-700"></div>
+            <div className="aspect-square sm:aspect-[4/3] lg:aspect-square bg-white rounded-[2.5rem] p-8 sm:p-12 flex flex-col justify-end relative overflow-hidden group border border-zinc-100 shadow-2xl shadow-emerald-200/50 transition-shadow duration-700">
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-50/50 to-transparent group-hover:scale-105 transition-transform duration-700"></div>
               <Quote className="w-12 h-12 sm:w-16 sm:h-16 text-emerald-600/20 relative z-10 mb-8" strokeWidth={1}/>
               <h3 className="text-2xl sm:text-3xl lg:text-4xl font-light relative z-10 text-zinc-900 leading-tight">"Wealth creation shouldn't be a black box. Our goal is absolute clarity."</h3>
             </div>
@@ -1633,7 +1883,7 @@ const AboutPage = ({ setCurrentPage, openContactModal }) => {
         </div>
       </section>
 
-      <section className="bg-emerald-50/50 py-24 px-6 sm:px-10 lg:px-16 xl:px-24">
+      <section className="bg-zinc-50/50 py-24 px-6 sm:px-10 lg:px-16 xl:px-24">
         <div className="w-full max-w-[1800px] mx-auto">
           <FadeIn className="mb-12">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter mb-4 text-zinc-900">The Ask Geo Pillars</h2>
@@ -1646,8 +1896,8 @@ const AboutPage = ({ setCurrentPage, openContactModal }) => {
               { title: "Fiduciary Duty", desc: "Your interests always precede ours. We grow only when your portfolio grows." },
               { title: "Holistic Planning", desc: "We look beyond mere returns, focusing on taxation, risk, and succession." }
             ].map((item, idx) => (
-              <FadeIn key={idx} delay={idx * 150} direction="up" className="bg-white border border-emerald-100 p-8 sm:p-10 rounded-[2rem] hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100 transition-all duration-500 group hover:-translate-y-2">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center font-mono text-lg font-medium mb-6 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors duration-500">
+              <FadeIn key={idx} delay={idx * 150} direction="up" className="bg-white border border-zinc-200 p-8 sm:p-10 rounded-[2rem] hover:border-emerald-200 hover:shadow-xl hover:shadow-zinc-200 transition-all duration-500 group hover:-translate-y-2">
+                <div className="w-12 h-12 bg-zinc-100 text-emerald-600 rounded-xl flex items-center justify-center font-mono text-lg font-medium mb-6 group-hover:bg-emerald-100 transition-colors duration-500">
                   0{idx + 1}
                 </div>
                 <h4 className="text-xl sm:text-2xl font-medium mb-3 text-zinc-900">{item.title}</h4>
@@ -1658,11 +1908,11 @@ const AboutPage = ({ setCurrentPage, openContactModal }) => {
         </div>
       </section>
 
-      <section className="bg-emerald-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 py-24 border-t border-emerald-100/50">
+      <section className="bg-green-50/30 px-6 sm:px-10 lg:px-16 xl:px-24 py-24 border-t border-green-100/50">
          <div className="w-full max-w-[1800px] mx-auto flex flex-col lg:flex-row gap-12 lg:gap-20 items-center">
             <FadeIn direction="left" className="lg:w-1/3 w-full">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter mb-8 text-zinc-900">Leadership</h2>
-              <div className="aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4] bg-white rounded-[2rem] p-2 relative overflow-hidden group shadow-2xl shadow-emerald-100 border border-emerald-100">
+              <div className="aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4] bg-white rounded-[2rem] p-2 relative overflow-hidden group shadow-2xl shadow-green-100 border border-green-100">
                  <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative">
                    <img src="https://static.wixstatic.com/media/548938_3bb01f88ba6541a195f21b0b543cd613~mv2.png" alt="Geo Thomas" className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-1000" />
                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-900/10 to-transparent"></div>
@@ -1674,7 +1924,7 @@ const AboutPage = ({ setCurrentPage, openContactModal }) => {
               </div>
             </FadeIn>
             <FadeIn delay={200} direction="right" className="lg:w-2/3 flex flex-col justify-center">
-              <Quote className="w-12 h-12 text-emerald-200 mb-8" strokeWidth={1} />
+              <Quote className="w-12 h-12 text-green-300 mb-8" strokeWidth={1} />
               <p className="text-xl sm:text-2xl lg:text-3xl font-light leading-relaxed text-zinc-900 mb-8">
                 "I started Ask Geo because I saw a massive gap between what institutions were doing to grow wealth and what retail investors were being sold. I wanted to level the playing field."
               </p>
@@ -1694,7 +1944,7 @@ const AboutPage = ({ setCurrentPage, openContactModal }) => {
 // --- SERVICES PAGE COMPONENT ---
 const ServicesPage = ({ setCurrentPage, openContactModal }) => {
   return (
-    <div className="pt-32 pb-0 animate-in fade-in duration-700 text-left bg-cyan-50/30">
+    <div className="pt-32 pb-0 animate-in fade-in duration-700 text-left bg-zinc-50">
       <section className="px-6 sm:px-10 lg:px-16 xl:px-24 w-full max-w-[1800px] mx-auto py-16 lg:py-24">
         <FadeIn direction="down">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tighter text-zinc-950 mb-6 leading-[1.05]">
@@ -1736,18 +1986,18 @@ const ServicesPage = ({ setCurrentPage, openContactModal }) => {
         </div>
       </section>
 
-      <section className="bg-emerald-50/50 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-28">
+      <section className="bg-green-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-28">
         <div className="max-w-[1800px] mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <FadeIn direction="right">
-            <div className="aspect-[4/3] bg-white rounded-[2.5rem] border border-emerald-100 relative overflow-hidden shadow-2xl shadow-emerald-100/50 group">
-               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-emerald-100/50 to-transparent group-hover:scale-105 transition-transform duration-1000"></div>
-               <TrendingUp className="absolute -top-10 -left-10 w-72 h-72 text-emerald-50/80 group-hover:rotate-12 transition-transform duration-1000" strokeWidth={0.5} />
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-emerald-100/50 rounded-full blur-2xl animate-pulse"></div>
+            <div className="aspect-[4/3] bg-white rounded-[2.5rem] border border-green-100 relative overflow-hidden shadow-2xl shadow-green-100/50 group">
+               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-green-100/50 to-transparent group-hover:scale-105 transition-transform duration-1000"></div>
+               <TrendingUp className="absolute -top-10 -left-10 w-72 h-72 text-green-50/80 group-hover:rotate-12 transition-transform duration-1000" strokeWidth={0.5} />
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-green-100/50 rounded-full blur-2xl animate-pulse"></div>
             </div>
           </FadeIn>
           <FadeIn delay={200} direction="left">
-            <div className="w-16 h-16 bg-white border border-emerald-100 rounded-2xl flex items-center justify-center mb-8 shadow-sm">
-              <Activity className="w-8 h-8 text-emerald-600" strokeWidth={1.5} />
+            <div className="w-16 h-16 bg-white border border-green-100 rounded-2xl flex items-center justify-center mb-8 shadow-sm">
+              <Activity className="w-8 h-8 text-green-600" strokeWidth={1.5} />
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter mb-6 text-zinc-900">Portfolio Management</h2>
             <p className="text-sm sm:text-base lg:text-lg text-zinc-600 font-light leading-relaxed mb-8">
@@ -1765,21 +2015,21 @@ const ServicesPage = ({ setCurrentPage, openContactModal }) => {
         </div>
       </section>
 
-      <section className="bg-orange-50/40 py-24 px-6 sm:px-10 lg:px-16 xl:px-24 border-t border-orange-100/50">
+      <section className="bg-zinc-50/50 py-24 px-6 sm:px-10 lg:px-16 xl:px-24 border-t border-zinc-200/50">
         <div className="w-full max-w-[1800px] mx-auto">
           <FadeIn direction="up" className="mb-16 max-w-3xl">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter mb-6 text-zinc-900">Our Onboarding Protocol</h2>
             <p className="text-sm sm:text-base lg:text-lg text-zinc-600 font-light leading-relaxed">A systematic, friction-free process designed to transition you into a fully optimized portfolio within weeks.</p>
           </FadeIn>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-             <div className="hidden lg:block absolute top-12 left-0 w-full h-px bg-orange-200 z-0"></div>
+             <div className="hidden lg:block absolute top-12 left-0 w-full h-px bg-zinc-200 z-0"></div>
              {[
                { step: "01", title: "Discovery", desc: "A deep dive into your current assets, liabilities, and aspirations." },
                { step: "02", title: "Audit", desc: "Our AI Engine analyzes your existing portfolio for inefficiencies and hidden risks." },
                { step: "03", title: "Architecture", desc: "We present a mathematical, newly structured portfolio blueprint." },
                { step: "04", title: "Execution", desc: "Seamless deployment and the start of 24/7 active monitoring." }
              ].map((item, i) => (
-               <FadeIn key={i} delay={i * 200} direction="zoom" className="relative z-10 bg-white p-8 rounded-[2rem] border border-orange-100 shadow-xl shadow-orange-100/30 hover:-translate-y-2 transition-transform duration-500">
+               <FadeIn key={i} delay={i * 200} direction="zoom" className="relative z-10 bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-xl shadow-zinc-200/30 hover:-translate-y-2 transition-transform duration-500">
                  <div className="w-14 h-14 bg-emerald-600 shadow-lg shadow-emerald-600/30 text-white rounded-2xl flex items-center justify-center text-lg font-bold mb-6">{item.step}</div>
                  <h4 className="text-xl font-medium mb-3 text-zinc-900">{item.title}</h4>
                  <p className="text-zinc-500 font-light text-base leading-relaxed">{item.desc}</p>
@@ -1811,7 +2061,7 @@ const CalculatorsPage = ({ setCurrentPage, openContactModal }) => {
   ];
 
   return (
-    <div className="pt-32 pb-0 animate-in fade-in duration-700 text-left bg-yellow-50/30">
+    <div className="pt-32 pb-0 animate-in fade-in duration-700 text-left bg-zinc-50">
       <section className="px-6 sm:px-10 lg:px-16 xl:px-24 w-full max-w-[1800px] mx-auto py-16 lg:py-20">
         <FadeIn direction="down" className="max-w-4xl">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tighter text-zinc-950 mb-6 leading-[1.05]">
@@ -1824,11 +2074,11 @@ const CalculatorsPage = ({ setCurrentPage, openContactModal }) => {
         </FadeIn>
       </section>
 
-      <section className="bg-slate-50/50 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-12 lg:py-16 border-y border-slate-200/50">
+      <section className="bg-white px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-12 lg:py-16 border-y border-zinc-200/50">
         <div className="max-w-[1800px] mx-auto">
-          <div className="bg-white border border-slate-200/60 rounded-[2.5rem] p-6 sm:p-10 lg:p-12 overflow-hidden shadow-2xl shadow-slate-200/50">
+          <div className="bg-white border border-zinc-200/60 rounded-[2.5rem] p-6 sm:p-10 lg:p-12 overflow-hidden shadow-2xl shadow-zinc-200/50">
             <FadeIn delay={100} direction="up" className="mb-12">
-              <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 snap-x border-b border-slate-100">
+              <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 snap-x border-b border-zinc-100">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -1836,7 +2086,7 @@ const CalculatorsPage = ({ setCurrentPage, openContactModal }) => {
                     className={`snap-start whitespace-nowrap flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 border ${
                       activeTab === tab.id 
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20' 
-                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-900 hover:bg-white'
+                        : 'bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300 hover:text-zinc-900 hover:bg-white'
                     }`}
                   >
                     <tab.icon className={`w-4 h-4 shrink-0 ${activeTab === tab.id ? 'animate-pulse' : ''}`} strokeWidth={activeTab === tab.id ? 2 : 1.5} />
@@ -1863,14 +2113,14 @@ const CalculatorsPage = ({ setCurrentPage, openContactModal }) => {
         </div>
       </section>
 
-      <section className="bg-emerald-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-28 flex flex-col items-center text-center">
-        <FadeIn direction="up" className="flex flex-col items-center max-w-2xl">
+      <section className="bg-emerald-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-28 flex flex-col items-start text-left">
+        <FadeIn direction="up" className="flex flex-col items-start max-w-2xl">
           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-emerald-100">
             <Calculator className="w-8 h-8 text-emerald-600" />
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter mb-6 text-zinc-900">Numbers look good?</h2>
           <p className="text-zinc-600 font-light mb-10 text-base sm:text-lg leading-relaxed">Calculators show possibilities. Our experts turn them into realities. Let Ask Geo build the portfolio that executes your math.</p>
-          <button onClick={() => openContactModal('Execute My Plan')} className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-all duration-300 shadow-xl shadow-emerald-600/20 inline-flex items-center justify-center gap-3 group hover:-translate-y-1 w-full sm:w-auto text-base">
+          <button onClick={() => openContactModal('Execute My Plan')} className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-all duration-300 shadow-xl shadow-emerald-600/20 inline-flex items-center justify-start gap-3 group hover:-translate-y-1 w-full sm:w-auto text-base">
             Schedule a Strategy Session <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </FadeIn>
@@ -1891,7 +2141,7 @@ const InsightsPage = ({ setCurrentPage, openContactModal }) => {
   ];
 
   return (
-    <div className="pt-32 pb-0 animate-in fade-in duration-700 text-left bg-emerald-50/30">
+    <div className="pt-32 pb-0 animate-in fade-in duration-700 text-left bg-zinc-50">
       <section className="px-6 sm:px-10 lg:px-16 xl:px-24 w-full max-w-[1800px] mx-auto py-16 lg:py-24">
         <FadeIn direction="down" className="max-w-4xl">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tighter text-zinc-950 mb-6 leading-[1.05]">
@@ -1904,7 +2154,7 @@ const InsightsPage = ({ setCurrentPage, openContactModal }) => {
         </FadeIn>
       </section>
 
-      <section className="bg-emerald-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-16 lg:py-20 border-y border-emerald-100/50">
+      <section className="bg-emerald-50/30 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-16 lg:py-20 border-y border-emerald-100/50">
         <div className="max-w-[1800px] mx-auto">
           <FadeIn delay={100} direction="zoom">
             <div className="bg-white border border-emerald-100 rounded-[2.5rem] p-8 sm:p-12 lg:p-16 flex flex-col lg:flex-row gap-12 lg:gap-16 items-center group cursor-pointer relative overflow-hidden shadow-2xl shadow-emerald-100/50 hover:shadow-emerald-200 transition-shadow duration-700">
@@ -1935,16 +2185,16 @@ const InsightsPage = ({ setCurrentPage, openContactModal }) => {
         </div>
       </section>
 
-      <section className="bg-violet-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-28">
+      <section className="bg-white px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto py-20 lg:py-28">
         <div className="max-w-[1800px] mx-auto">
           <FadeIn direction="up" className="mb-12">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter text-zinc-900">Latest Publications</h2>
           </FadeIn>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-16">
             {articles.map((post, idx) => (
-              <FadeIn key={idx} delay={idx * 150} direction="up" className="group cursor-pointer flex flex-col h-full bg-white p-6 rounded-3xl border border-violet-100 shadow-xl shadow-violet-100/20 hover:-translate-y-2 hover:shadow-violet-200/40 transition-all duration-500">
+              <FadeIn key={idx} delay={idx * 150} direction="up" className="group cursor-pointer flex flex-col h-full bg-white p-6 rounded-3xl border border-zinc-200 shadow-xl shadow-zinc-200/20 hover:-translate-y-2 hover:shadow-zinc-200/40 transition-all duration-500">
                 <div className="aspect-[16/10] bg-zinc-50 rounded-2xl mb-6 overflow-hidden relative border border-zinc-100">
-                  <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-transparent transition-transform duration-1000 group-hover:scale-110"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-100/50 to-transparent transition-transform duration-1000 group-hover:scale-110"></div>
                   <BookOpen className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 text-zinc-200 group-hover:text-emerald-500 group-hover:scale-110 transition-all duration-500" strokeWidth={1} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
@@ -1985,7 +2235,7 @@ const AskGeoApp = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-stone-50 text-zinc-900 font-sans selection:bg-emerald-200 selection:text-zinc-900 overflow-x-hidden text-left">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-emerald-200 selection:text-zinc-900 overflow-x-hidden text-left">
       
       <style>{`
         @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
@@ -2073,9 +2323,9 @@ const AskGeoApp = () => {
         {currentPage === 'home' && (
           <>
       {/* --- Hero Section --- */}
-      <section id="home" className="relative pt-36 sm:pt-44 pb-24 sm:pb-32 lg:pt-52 lg:pb-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20 overflow-hidden bg-stone-50">
+      <section id="home" className="relative pt-36 sm:pt-44 pb-24 sm:pb-32 lg:pt-52 lg:pb-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20 overflow-hidden bg-zinc-50">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-100/40 rounded-full blur-[100px] -z-10 animate-blob"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-100/40 rounded-full blur-[100px] -z-10 animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-green-100/40 rounded-full blur-[100px] -z-10 animate-blob animation-delay-2000"></div>
 
         <div className="w-full max-w-[1800px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           <div className="lg:w-1/2 z-10 relative">
@@ -2153,8 +2403,8 @@ const AskGeoApp = () => {
 
                 {/* Floating Card 2: Trust/Clients */}
                 <div className="absolute -right-12 sm:-right-28 lg:-right-40 top-[35%] lg:top-[40%] bg-white border border-zinc-100 p-4 sm:p-5 rounded-2xl shadow-xl animate-float-delayed z-20 flex items-center gap-4 cursor-default w-max">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" strokeWidth={1.5} />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-zinc-600" strokeWidth={1.5} />
                   </div>
                   <div className="pr-4 sm:pr-6">
                     <p className="text-[9px] sm:text-[10px] font-bold text-zinc-400 tracking-widest uppercase mb-1">Trust</p>
@@ -2179,19 +2429,19 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- Clean Divider Stats --- */}
-      <section className="border-y border-emerald-100/50 bg-emerald-50/40 py-16 lg:py-20">
-        <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 grid sm:grid-cols-2 lg:grid-cols-3 gap-10 sm:gap-12 divide-y sm:divide-y-0 sm:divide-x divide-emerald-200">
+      <section className="border-y border-zinc-200/50 bg-white py-16 lg:py-20">
+        <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 grid sm:grid-cols-2 lg:grid-cols-3 gap-10 sm:gap-12 divide-y sm:divide-y-0 sm:divide-x divide-zinc-200">
           <FadeIn delay={100} direction="up" className="py-4 sm:pr-8 text-left">
             <h4 className="text-5xl sm:text-6xl lg:text-7xl font-light tracking-tighter text-zinc-900 mb-2">
               <AnimatedNumber end={26} suffix="L+" />
             </h4>
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-600 uppercase">Active Investors</p>
+            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-500 uppercase">Active Investors</p>
           </FadeIn>
           <FadeIn delay={250} direction="up" className="py-8 sm:py-4 sm:px-8 text-left">
             <h4 className="text-5xl sm:text-6xl lg:text-7xl font-light tracking-tighter text-zinc-900 mb-2">
               <AnimatedNumber end={133} suffix="K" />
             </h4>
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-emerald-600 uppercase">Crore AUM</p>
+            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-zinc-500 uppercase">Crore AUM</p>
           </FadeIn>
           <FadeIn delay={400} direction="up" className="py-8 sm:py-4 sm:pl-8 text-left sm:col-span-2 lg:col-span-1 sm:border-t lg:border-t-0 sm:pt-8 lg:pt-4">
             <h4 className="text-5xl sm:text-6xl lg:text-7xl font-light tracking-tighter text-emerald-600 mb-2">
@@ -2203,7 +2453,7 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- Core Philosophy --- */}
-      <section className="bg-emerald-50/40 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full">
+      <section className="bg-emerald-50/30 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full">
         <div className="max-w-[1800px] mx-auto">
           <FadeIn className="mb-16 max-w-3xl text-left">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tighter mb-6 text-zinc-900">Our Core Philosophy</h2>
@@ -2218,7 +2468,7 @@ const AskGeoApp = () => {
               { icon: Zap, title: "Dynamic Agility", desc: "Market conditions change rapidly. Our strategies adapt in real-time to protect and grow your wealth." }
             ].map((item, idx) => (
               <FadeIn key={idx} delay={idx * 200} direction="zoom" className="group text-left bg-white p-8 sm:p-10 rounded-[2rem] border border-emerald-100 shadow-xl shadow-emerald-100/30 hover:-translate-y-2 transition-all duration-500">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-emerald-50 transition-all duration-500 border border-emerald-100">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-emerald-100 transition-all duration-500 border border-emerald-100">
                   <item.icon className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-500 group-hover:text-emerald-600 transition-colors duration-500" strokeWidth={1.5} />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-medium tracking-tight mb-4 text-zinc-900">{item.title}</h3>
@@ -2230,12 +2480,11 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- AI Tool Section --- */}
-      <section id="ai-tools" className="bg-emerald-50/40 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full relative border-y border-emerald-100/50">
+      <section id="ai-tools" className="bg-zinc-50 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full relative border-y border-zinc-200">
         <div className="max-w-[1800px] mx-auto">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[800px] aspect-square bg-emerald-100/50 rounded-full blur-[100px] -z-10 animate-blob animation-delay-2000"></div>
           
           <FadeIn direction="up" className="mb-16 max-w-3xl text-left">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-emerald-100 shadow-md mb-8 group hover:shadow-emerald-200/50 transition-all duration-500">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-zinc-200 shadow-md mb-8 group hover:shadow-emerald-200/50 transition-all duration-500">
               <Bot className="w-7 h-7 text-emerald-600 group-hover:animate-bounce" strokeWidth={1.5} />
             </div>
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight mb-6 text-zinc-900">Geo AI Insight Engine</h2>
@@ -2251,7 +2500,7 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- Philosophy Section --- */}
-      <section id="about" className="py-24 sm:py-32 lg:py-40 bg-emerald-50/50 px-6 sm:px-10 lg:px-16 xl:px-24 text-left border-b border-emerald-100/50">
+      <section id="about" className="py-24 sm:py-32 lg:py-40 bg-emerald-50/40 px-6 sm:px-10 lg:px-16 xl:px-24 text-left border-b border-emerald-100/50">
         <div className="w-full max-w-[1800px] mx-auto grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           <div>
             <FadeIn direction="left">
@@ -2278,19 +2527,19 @@ const AskGeoApp = () => {
           
           <div className="grid sm:grid-cols-2 gap-6 relative">
             <FadeIn delay={200} direction="zoom" className="space-y-6 sm:pt-12">
-              <div className="bg-white border border-emerald-100 rounded-[2rem] p-8 sm:p-10 hover:shadow-xl hover:shadow-emerald-100/50 transition-all duration-500 hover:-translate-y-2 group">
+              <div className="bg-white border border-green-100 rounded-[2rem] p-8 sm:p-10 hover:shadow-xl hover:shadow-green-100/50 transition-all duration-500 hover:-translate-y-2 group">
                 <PieChart className="text-emerald-500 w-8 h-8 mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                 <h4 className="font-medium text-xl mb-2 text-zinc-900">Mutual Funds</h4>
                 <p className="text-zinc-500 text-sm font-light leading-relaxed">Expertly curated schemes for optimal growth.</p>
               </div>
-              <div className="bg-white border border-emerald-100 rounded-[2rem] p-8 sm:p-10 hover:shadow-xl hover:shadow-emerald-100/50 transition-all duration-500 hover:-translate-y-2 group">
+              <div className="bg-white border border-green-100 rounded-[2rem] p-8 sm:p-10 hover:shadow-xl hover:shadow-green-100/50 transition-all duration-500 hover:-translate-y-2 group">
                 <TrendingUp className="text-emerald-500 w-8 h-8 mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                 <h4 className="font-medium text-xl mb-2 text-zinc-900">Equity & ETFs</h4>
                 <p className="text-zinc-500 text-sm font-light leading-relaxed">Direct market participation with strategy.</p>
               </div>
             </FadeIn>
             <FadeIn delay={400} direction="zoom" className="space-y-6">
-              <div className="bg-white border border-emerald-100 rounded-[2rem] p-8 sm:p-10 hover:shadow-xl hover:shadow-emerald-100/50 transition-all duration-500 hover:-translate-y-2 group">
+              <div className="bg-white border border-green-100 rounded-[2rem] p-8 sm:p-10 hover:shadow-xl hover:shadow-green-100/50 transition-all duration-500 hover:-translate-y-2 group">
                 <ShieldCheck className="text-emerald-500 w-8 h-8 mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                 <h4 className="font-medium text-xl mb-2 text-zinc-900">Bonds & FD</h4>
                 <p className="text-zinc-500 text-sm font-light leading-relaxed">Secure, fixed-income instruments.</p>
@@ -2305,7 +2554,7 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- Services Section --- */}
-      <section id="services" className="bg-orange-50/40 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full text-left">
+      <section id="services" className="bg-white py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 w-full text-left">
         <div className="max-w-[1800px] mx-auto">
           <FadeIn direction="up" className="mb-16 max-w-3xl">
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tighter mb-6 text-zinc-900">Our Expertise</h2>
@@ -2321,9 +2570,9 @@ const AskGeoApp = () => {
               { title: "Insurance Management", icon: ShieldCheck, desc: "Managing risk by assessing needs, identifying coverage gaps and recommending policies." }
             ].map((service, idx) => (
               <FadeIn key={idx} delay={idx * 200} direction="zoom" className="group">
-                <div className="bg-white border border-orange-100 p-10 sm:p-12 rounded-[2.5rem] hover:shadow-2xl hover:shadow-orange-100/50 hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
-                  <div className="w-16 h-16 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition-all duration-500">
-                    <service.icon className="w-7 h-7 text-orange-500 group-hover:text-white transition-colors group-hover:-rotate-12 duration-500" strokeWidth={1.5} />
+                <div className="bg-white border border-zinc-200 p-10 sm:p-12 rounded-[2.5rem] hover:shadow-2xl hover:shadow-zinc-200/50 hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
+                  <div className="w-16 h-16 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition-all duration-500">
+                    <service.icon className="w-7 h-7 text-emerald-500 group-hover:text-white transition-colors group-hover:-rotate-12 duration-500" strokeWidth={1.5} />
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-medium tracking-tight mb-4 text-zinc-900">{service.title}</h3>
                   <p className="text-zinc-500 font-light text-base leading-relaxed mt-auto">{service.desc}</p>
@@ -2335,8 +2584,7 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- Interactive Tools Teaser --- */}
-      <section className="py-24 sm:py-32 lg:py-40 bg-emerald-50/50 text-zinc-900 px-6 sm:px-10 lg:px-16 xl:px-24 relative overflow-hidden text-left border-y border-emerald-100/50">
-        <div className="absolute top-0 right-0 w-full max-w-[600px] aspect-square bg-emerald-100/60 rounded-full blur-[100px] pointer-events-none animate-blob animation-delay-4000"></div>
+      <section className="py-24 sm:py-32 lg:py-40 bg-emerald-50/30 text-zinc-900 px-6 sm:px-10 lg:px-16 xl:px-24 relative overflow-hidden text-left border-y border-emerald-100/50">
         <div className="w-full max-w-[1800px] mx-auto flex flex-col lg:flex-row items-center gap-16 lg:gap-24 relative z-10">
           <div className="w-full lg:w-1/2">
             <FadeIn direction="left" className="max-w-xl">
@@ -2356,7 +2604,7 @@ const AskGeoApp = () => {
           </div>
           <div className="w-full lg:w-1/2">
             <FadeIn delay={300} direction="zoom">
-              <div className="bg-white border border-emerald-100 p-8 sm:p-10 lg:p-12 rounded-[2.5rem] shadow-2xl shadow-emerald-200/50 hover:shadow-emerald-200/40 transition-shadow duration-700">
+              <div className="bg-white border border-emerald-100 p-8 sm:p-10 lg:p-12 rounded-[2.5rem] shadow-2xl shadow-emerald-200/50 hover:shadow-emerald-200 transition-shadow duration-700">
                 <div className="flex justify-between items-center mb-8 border-b border-zinc-100 pb-6">
                   <div>
                     <h4 className="text-xl sm:text-2xl font-medium text-zinc-900 mb-2">SIP Calculator Pro</h4>
@@ -2391,10 +2639,10 @@ const AskGeoApp = () => {
       </section>
 
       {/* --- Pre-Footer CTA --- */}
-      <section className="bg-emerald-50/50 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 relative overflow-hidden border-t border-emerald-100/50">
+      <section className="bg-zinc-50 py-24 sm:py-32 lg:py-40 px-6 sm:px-10 lg:px-16 xl:px-24 relative overflow-hidden text-left border-t border-zinc-200">
         <div className="w-full max-w-[1800px] mx-auto relative z-10 flex flex-col items-start">
-          <FadeIn direction="up" className="flex flex-col items-start max-w-3xl text-left">
-            <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mb-8 border border-emerald-100 shadow-xl shadow-emerald-100/50">
+          <FadeIn direction="up" className="flex flex-col items-start max-w-3xl">
+            <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mb-8 border border-zinc-200 shadow-xl shadow-emerald-100/50">
               <TrendingUp className="w-10 h-10 text-emerald-600" strokeWidth={1.5} />
             </div>
             <h2 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-light tracking-tighter text-zinc-950 mb-8 leading-[1.05]">
@@ -2406,7 +2654,7 @@ const AskGeoApp = () => {
             <p className="text-lg sm:text-xl lg:text-2xl text-zinc-600 font-light mb-12 leading-relaxed">
               Join over 26 Lakh investors who trust Ask Geo to navigate the complexities of wealth creation and preservation.
             </p>
-            <button onClick={() => openContactModal('Start Your Journey')} className="px-10 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-medium transition-all duration-300 shadow-[0_10px_40px_rgba(16,185,129,0.3)] inline-flex items-center gap-3 text-base sm:text-lg w-full sm:w-auto justify-center group hover:-translate-y-1">
+            <button onClick={() => openContactModal('Start Your Journey')} className="px-10 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-medium transition-all duration-300 shadow-[0_10px_40px_rgba(16,185,129,0.3)] flex items-center gap-3 text-base sm:text-lg w-full sm:w-auto justify-start group hover:-translate-y-1">
               Start Your Journey <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2} />
             </button>
           </FadeIn>
@@ -2423,12 +2671,11 @@ const AskGeoApp = () => {
             
             {/* Brand Column */}
             <div className="lg:col-span-5 xl:col-span-6">
-              <div className="mb-8">
-                <img 
-                  src="https://static.wixstatic.com/media/c12706_95ffde7d7fdf43fcb12e87a36b56eef6~mv2.png" 
-                  alt="Ask Geo Logo" 
-                  className="h-12 w-auto object-contain filter brightness-0 invert" 
-                />
+              <div className="flex items-center gap-3 group cursor-pointer mb-8" onClick={() => { setCurrentPage('home'); window.scrollTo(0,0); }}>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-zinc-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 transition-all duration-500 shadow-md">
+                  <TrendingUp className="text-white w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.5} />
+                </div>
+                <span className="text-2xl sm:text-3xl font-light tracking-tight text-white">Ask <span className="font-medium transition-colors duration-500 text-emerald-500 group-hover:text-emerald-400">Geo</span></span>
               </div>
               <p className="text-sm sm:text-base font-light leading-relaxed mb-10 max-w-sm text-zinc-400">
                 A premier financial advisory firm dedicated to building, managing, and preserving wealth through highly customized, data-driven strategies and AI-optimized planning.
