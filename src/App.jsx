@@ -392,7 +392,10 @@ export default function App() {
         </div>
       )}
 
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+      {/* Removed "items-start" from this grid container so the 5-column right pane
+        stretches full height. This prevents the sticky dashboard from scrolling out of view.
+      */}
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 xl:grid-cols-12 gap-8">
         
         {/* LEFT COLUMN: THE WORKSPACE (7 Cols) */}
         <div className="xl:col-span-7 space-y-6">
@@ -566,89 +569,13 @@ export default function App() {
             </div>
           </section>
 
-          {/* SEC 5: NEGOTIATION MATRIX */}
-          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500 opacity-5 rounded-full blur-[60px] transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-            
-            <div className="mb-6">
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                <ShieldCheck className="w-6 h-6 text-rose-500" /> Builder Squeeze Stress Test
-              </h2>
-              <p className="text-slate-500 text-sm mt-1 font-medium">
-                At the final table, builders will compress your base commission. See how a drop affects your absolute unit break-even point.
-              </p>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="px-6 py-4 border-b border-slate-200">Base Comm. Drop</th>
-                    <th className="px-6 py-4 border-b border-slate-200 text-right">Proj. Net Profit</th>
-                    <th className="px-6 py-4 border-b border-slate-200 text-right">Units to Break-Even</th>
-                    <th className="px-6 py-4 border-b border-slate-200 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {[0, 0.5, 1.0, 1.5, 2.0].map((drop, idx) => {
-                    const testComm = commissionPct - drop;
-                    const testBaseRev = financials.projectValue * (testComm / 100);
-                    const testNetRev = (testBaseRev + financials.bonusRevenue) - financials.cpPayout;
-                    const testProfit = testNetRev - financials.totalCost;
-                    const testNetMargin = (testComm + performanceBonusPct - cpSharePct) / 100;
-                    
-                    const reqSalesVal = testNetMargin > 0 ? financials.totalCost / testNetMargin : Infinity;
-                    const testBEUnits = reqSalesVal / (avgTicketSizeCr * 10000000);
-                    
-                    const isBase = drop === 0;
-
-                    return (
-                      <tr key={idx} className={`transition-colors hover:bg-slate-50 ${isBase ? 'bg-indigo-50/40' : ''}`}>
-                        <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-3">
-                          {testComm.toFixed(1)}% 
-                          {isBase && <span className="text-[10px] uppercase tracking-wider bg-indigo-100 text-indigo-700 px-2 py-1 rounded-md shadow-sm">Current</span>}
-                          {!isBase && <span className="text-[10px] font-bold text-rose-600 flex items-center bg-rose-50 px-2 py-1 rounded-md border border-rose-100"><TrendingDown className="w-3 h-3 mr-1"/> -{drop}%</span>}
-                        </td>
-                        <td className={`px-6 py-4 text-right font-bold tracking-tight ${testProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {testProfit >= 0 ? '+' : '-'}{formatINR(Math.abs(testProfit))}
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-700">
-                           {testBEUnits !== Infinity && testBEUnits > 0 ? (
-                             <span className={testBEUnits > totalUnits ? 'text-rose-500' : ''}>
-                               {Math.ceil(testBEUnits)} / {totalUnits}
-                             </span>
-                           ) : <span className="text-rose-500">Impossible</span>}
-                        </td>
-                        <td className="px-6 py-4 flex justify-center">
-                          {testProfit >= 0 ? (
-                            testBEUnits > totalUnits ? (
-                              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 tooltip" title="Requires >100% sales to break even">
-                                <AlertCircle className="w-4 h-4"/>
-                              </div>
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 ring-4 ring-emerald-50">
-                                <CheckCircle2 className="w-4 h-4"/>
-                              </div>
-                            )
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 ring-4 ring-rose-50">
-                              <AlertCircle className="w-4 h-4"/>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
         </div>
 
         {/* RIGHT COLUMN: STICKY HUD / DASHBOARD (5 Cols) */}
         <div className="xl:col-span-5 relative">
-          <div className="sticky top-28 space-y-6">
+          
+          {/* Scrollable sticky wrapper so it works on small laptop heights */}
+          <div className="sticky top-24 space-y-6 pb-8 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             
             {/* The Master Readout (Deep Dark Glassmorphism) */}
             <div className="bg-slate-950 text-white rounded-3xl shadow-2xl shadow-indigo-900/20 overflow-hidden relative border border-slate-800">
@@ -754,6 +681,84 @@ export default function App() {
                 ))}
               </div>
             )}
+
+            {/* SEC 5: NEGOTIATION MATRIX (Moved to the Right Pane) */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500 opacity-5 rounded-full blur-[60px] transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+              
+              <div className="mb-5">
+                <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-rose-500" /> Builder Squeeze Stress Test
+                </h2>
+                <p className="text-slate-500 text-xs mt-1 font-medium leading-relaxed">
+                  At the final table, builders compress your base commission. See how drops affect your absolute break-even point.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
+                    <tr>
+                      <th className="px-3 py-3 border-b border-slate-200">Comm. Drop</th>
+                      <th className="px-3 py-3 border-b border-slate-200 text-right">Net Profit</th>
+                      <th className="px-3 py-3 border-b border-slate-200 text-right">Break-Even</th>
+                      <th className="px-3 py-3 border-b border-slate-200 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white text-xs">
+                    {[0, 0.5, 1.0, 1.5, 2.0].map((drop, idx) => {
+                      const testComm = commissionPct - drop;
+                      const testBaseRev = financials.projectValue * (testComm / 100);
+                      const testNetRev = (testBaseRev + financials.bonusRevenue) - financials.cpPayout;
+                      const testProfit = testNetRev - financials.totalCost;
+                      const testNetMargin = (testComm + performanceBonusPct - cpSharePct) / 100;
+                      
+                      const reqSalesVal = testNetMargin > 0 ? financials.totalCost / testNetMargin : Infinity;
+                      const testBEUnits = reqSalesVal / (avgTicketSizeCr * 10000000);
+                      
+                      const isBase = drop === 0;
+
+                      return (
+                        <tr key={idx} className={`transition-colors hover:bg-slate-50 ${isBase ? 'bg-indigo-50/40' : ''}`}>
+                          <td className="px-3 py-3 font-bold text-slate-900 flex items-center gap-2">
+                            {testComm.toFixed(1)}% 
+                            {isBase && <span className="text-[9px] uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-sm shadow-sm">Current</span>}
+                            {!isBase && <span className="text-[9px] font-bold text-rose-600 flex items-center bg-rose-50 px-1.5 py-0.5 rounded-sm border border-rose-100"><TrendingDown className="w-2.5 h-2.5 mr-0.5"/>-{drop}%</span>}
+                          </td>
+                          <td className={`px-3 py-3 text-right font-bold tracking-tight ${testProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {testProfit >= 0 ? '+' : '-'}{formatINR(Math.abs(testProfit))}
+                          </td>
+                          <td className="px-3 py-3 text-right font-bold text-slate-700">
+                             {testBEUnits !== Infinity && testBEUnits > 0 ? (
+                               <span className={testBEUnits > totalUnits ? 'text-rose-500' : ''}>
+                                 {Math.ceil(testBEUnits)} / {totalUnits}
+                               </span>
+                             ) : <span className="text-rose-500">Impossible</span>}
+                          </td>
+                          <td className="px-3 py-3 flex justify-center">
+                            {testProfit >= 0 ? (
+                              testBEUnits > totalUnits ? (
+                                <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 tooltip" title="Requires >100% sales to break even">
+                                  <AlertCircle className="w-3 h-3"/>
+                                </div>
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 ring-2 ring-emerald-50">
+                                  <CheckCircle2 className="w-3 h-3"/>
+                                </div>
+                              )
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 ring-2 ring-rose-50">
+                                <AlertCircle className="w-3 h-3"/>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             {/* AI Co-Pilot Trigger */}
             <button
