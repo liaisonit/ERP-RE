@@ -15,9 +15,20 @@ const formatINR = (value) => {
   return `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 };
 
+// Static color map to prevent Tailwind from purging dynamically constructed classes
+const COLOR_MAP = {
+  indigo: { fill: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-100', thumb: 'border-indigo-500' },
+  blue: { fill: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-100', thumb: 'border-blue-500' },
+  emerald: { fill: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100', thumb: 'border-emerald-500' },
+  rose: { fill: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-100', thumb: 'border-rose-500' },
+  slate: { fill: 'bg-slate-500', text: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100', thumb: 'border-slate-500' },
+  orange: { fill: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-100', thumb: 'border-orange-500' },
+};
+
 // Sleek, minimal slider component
 const SliderField = ({ label, value, min, max, step, onChange, formatPrefix = '', formatSuffix = '', helperText, color = 'indigo', icon: Icon }) => {
-  const percentage = ((value - min) / (max - min)) * 100;
+  const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+  const styles = COLOR_MAP[color] || COLOR_MAP.indigo;
   
   return (
     <div className="mb-6 group">
@@ -26,15 +37,24 @@ const SliderField = ({ label, value, min, max, step, onChange, formatPrefix = ''
           {Icon && <Icon className="w-4 h-4 text-slate-400" />}
           {label}
         </label>
-        <span className={`text-sm font-bold text-${color}-700 bg-${color}-50 px-2.5 py-1 rounded-md border border-${color}-100 transition-colors shadow-sm`}>
+        <span className={`text-sm font-bold ${styles.text} ${styles.bg} px-2.5 py-1 rounded-md border ${styles.border} transition-colors shadow-sm`}>
           {formatPrefix}{value.toLocaleString('en-IN')}{formatSuffix}
         </span>
       </div>
-      <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+      
+      {/* Removed overflow-hidden so the custom thumb doesn't get clipped */}
+      <div className="relative h-2 w-full bg-slate-200 rounded-full shadow-inner flex items-center my-3">
+        {/* Custom filled track */}
         <div 
-          className={`absolute top-0 left-0 h-full bg-${color}-500 transition-all duration-150 ease-out`}
+          className={`absolute top-0 left-0 h-full ${styles.fill} rounded-full pointer-events-none`}
           style={{ width: `${percentage}%` }}
         />
+        {/* Custom thumb */}
+        <div 
+          className={`absolute h-5 w-5 bg-white border-2 ${styles.thumb} rounded-full shadow pointer-events-none z-10 transition-transform group-hover:scale-110`}
+          style={{ left: `calc(${percentage}% - 10px)` }}
+        />
+        {/* Invisible native input for interaction */}
         <input
           type="range"
           min={min}
@@ -42,7 +62,7 @@ const SliderField = ({ label, value, min, max, step, onChange, formatPrefix = ''
           step={step}
           value={value}
           onChange={(e) => onChange && onChange(parseFloat(e.target.value))}
-          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-20"
         />
       </div>
       {helperText && <p className="text-xs text-slate-400 mt-2 font-medium leading-relaxed">{helperText}</p>}
