@@ -1,839 +1,951 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
-  TrendingUp, TrendingDown, AlertCircle, Target, Users, 
-  ShieldCheck, Zap, Calculator, Building, CheckCircle2, 
-  BarChart3, Info, PieChart, ArrowRightLeft, BriefcaseBusiness, 
-  Lightbulb, Layers, Megaphone, MonitorSmartphone, Headset, 
-  MapPin, Activity, Coins, Sparkles, Bot, Loader2, X, Wand2
+  Building, LayoutDashboard, IndianRupee, Users, 
+  FileText, CheckCircle, Clock, ShieldCheck,
+  Download, CreditCard, Lock, Phone, Filter, 
+  Bell, Search, FileSpreadsheet, AlertTriangle, 
+  Sparkles, BrainCircuit, ChevronRight, Bot, 
+  Wand2, TrendingUp, X, HardHat, ClipboardList, 
+  Truck, Hammer, Box, Send, Plus, Mail
 } from 'lucide-react';
 
-// Utility for formatting INR
-const formatINR = (value) => {
-  if (!isFinite(value) || isNaN(value)) return 'N/A';
-  if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
-  if (value >= 100000) return `₹${(value / 100000).toFixed(2)} L`;
-  return `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+// --- INITIAL STATE DATA ---
+const generateInitialUnits = () => {
+  const units = [];
+  for (let floor = 1; floor <= 6; floor++) {
+    for (let unitNum = 1; unitNum <= 4; unitNum++) {
+      const is3BHK = unitNum === 1 || unitNum === 4;
+      units.push({
+        id: `A-${floor}0${unitNum}`,
+        unit_number: `${floor}0${unitNum}`,
+        floor: floor,
+        type: is3BHK ? '3BHK' : '2BHK',
+        carpet_area: is3BHK ? 1150 : 850,
+        base_rate: 9500,
+        status: floor === 1 ? (unitNum === 1 ? 'Booked' : 'Blocked') : 'Available',
+        customer: floor === 1 && unitNum === 1 ? 'Rahul Sharma' : (floor === 1 && unitNum === 2 ? 'Sneha Patil' : null),
+        token_amount: floor === 1 && unitNum === 1 ? 500000 : (floor === 1 && unitNum === 2 ? 100000 : 0),
+        ai_insight: floor > 4 ? "High demand floor. 2% premium recommended." : "Standard pricing optimized."
+      });
+    }
+  }
+  return units;
 };
 
-// Static color map to prevent Tailwind from purging dynamically constructed classes
-const COLOR_MAP = {
-  indigo: { fill: 'bg-indigo-500', text: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-100', thumb: 'border-indigo-500' },
-  blue: { fill: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-100', thumb: 'border-blue-500' },
-  emerald: { fill: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100', thumb: 'border-emerald-500' },
-  rose: { fill: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-100', thumb: 'border-rose-500' },
-  slate: { fill: 'bg-slate-500', text: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100', thumb: 'border-slate-500' },
-  orange: { fill: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-100', thumb: 'border-orange-500' },
+const initialLeads = [
+  { id: 'L-1001', name: 'Vikram Desai', phone: '+91 9876543210', source: 'Meta Ads', budget: '1.2 Cr', status: 'New', ai_score: 92, ai_action: "High intent. Call immediately." },
+  { id: 'L-1002', name: 'Priya Rajan', phone: '+91 9876543211', source: 'Website', budget: '1.5 Cr', status: 'Contacted', ai_score: 65, ai_action: "Send virtual tour link." },
+  { id: 'L-1003', name: 'Amit Singh', phone: '+91 9876543212', source: '99acres', budget: '90 L', status: 'Site Visit', ai_score: 88, ai_action: "Follow up on cost sheet." },
+  { id: 'L-1004', name: 'Neha Gupta', phone: '+91 9876543213', source: 'Referral', budget: '2 Cr', status: 'Negotiation', ai_score: 95, ai_action: "Ready to close. Approve 1% discount." },
+];
+
+const initialDemands = [
+  { id: 'D-501', unitId: 'A-101', customer: 'Rahul Sharma', amount: 1500000, milestone: 'Plinth Completion', dueDate: '2026-04-10', status: 'Overdue', ai_risk: 'High (85%)' },
+  { id: 'D-502', unitId: 'A-101', customer: 'Rahul Sharma', amount: 200000, milestone: 'GST (Plinth)', dueDate: '2026-04-10', status: 'Overdue', ai_risk: 'High (85%)' },
+  { id: 'D-503', unitId: 'A-201', customer: 'Anjali Verma', amount: 1500000, milestone: 'Plinth Completion', dueDate: '2026-04-20', status: 'Pending', ai_risk: 'Low (12%)' },
+];
+
+const initialBoq = [
+  { id: 'BQ-001', category: 'Steel', item: 'TMT 500D FE', uom: 'MT', est_qty: 1500, act_qty: 620, est_rate: 65000, act_rate: 64200, status: 'On Track', ai_pred: "Stock sufficient for next 45 days." },
+  { id: 'BQ-002', category: 'Cement', item: 'OPC 53 Grade', uom: 'Bags', est_qty: 50000, act_qty: 12500, est_rate: 380, act_rate: 395, status: 'Over Budget', ai_pred: "Price rally detected. Lock vendor rates now." },
+  { id: 'BQ-003', category: 'Masonry', item: 'AAC Blocks', uom: 'CUM', est_qty: 8000, act_qty: 1200, est_rate: 3200, act_rate: 3200, status: 'On Track', ai_pred: "Optimal consumption matching timeline." },
+];
+
+const ROLES = {
+  PRE_SALES: 'Pre-Sales (SDR)',
+  SALES: 'Sales Executive',
+  CRM: 'Post-Sales / CRM',
+  FINANCE: 'Finance & Legal',
+  OPS: 'Project Operations',
+  MANAGEMENT: 'CXO / Management'
 };
 
-// Sleek, minimal slider component
-const SliderField = ({ label, value, min, max, step, onChange, formatPrefix = '', formatSuffix = '', helperText, color = 'indigo', icon: Icon }) => {
-  const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-  const styles = COLOR_MAP[color] || COLOR_MAP.indigo;
+export default function OPERP() {
+  const [role, setRole] = useState(ROLES.MANAGEMENT);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [aiEnabled, setAiEnabled] = useState(true);
   
-  return (
-    <div className="mb-6 group">
-      <div className="flex justify-between items-end mb-2">
-        <label className="text-sm font-semibold text-slate-700 tracking-tight flex items-center gap-1.5">
-          {Icon && <Icon className="w-4 h-4 text-slate-400" />}
-          {label}
-        </label>
-        <span className={`text-sm font-bold ${styles.text} ${styles.bg} px-2.5 py-1 rounded-md border ${styles.border} transition-colors shadow-sm`}>
-          {formatPrefix}{value.toLocaleString('en-IN')}{formatSuffix}
-        </span>
-      </div>
-      
-      {/* Removed overflow-hidden so the custom thumb doesn't get clipped */}
-      <div className="relative h-2 w-full bg-slate-200 rounded-full shadow-inner flex items-center my-3">
-        {/* Custom filled track */}
-        <div 
-          className={`absolute top-0 left-0 h-full ${styles.fill} rounded-full pointer-events-none`}
-          style={{ width: `${percentage}%` }}
-        />
-        {/* Custom thumb */}
-        <div 
-          className={`absolute h-5 w-5 bg-white border-2 ${styles.thumb} rounded-full shadow pointer-events-none z-10 transition-transform group-hover:scale-110`}
-          style={{ left: `calc(${percentage}% - 10px)` }}
-        />
-        {/* Invisible native input for interaction */}
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange && onChange(parseFloat(e.target.value))}
-          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-20"
-        />
-      </div>
-      {helperText && <p className="text-xs text-slate-400 mt-2 font-medium leading-relaxed">{helperText}</p>}
-    </div>
-  );
-};
-
-// Component for the Unit Mix Visualization
-const UnitMixBar = ({ mix }) => {
-  const total = mix.bhk1 + mix.bhk2 + mix.bhk3 + mix.bhk4;
-  const p1 = (mix.bhk1 / total) * 100;
-  const p2 = (mix.bhk2 / total) * 100;
-  const p3 = (mix.bhk3 / total) * 100;
-  const p4 = (mix.bhk4 / total) * 100;
-
-  return (
-    <div className="mt-6">
-      <div className="flex justify-between text-xs font-semibold text-slate-500 mb-2">
-        <span>Inventory Mix</span>
-        <span>{total} Total Relative Weight</span>
-      </div>
-      <div className="h-3 w-full flex rounded-full overflow-hidden shadow-inner">
-        {p1 > 0 && <div style={{ width: `${p1}%` }} className="bg-slate-300 transition-all" title={`1 BHK: ${p1.toFixed(0)}%`} />}
-        {p2 > 0 && <div style={{ width: `${p2}%` }} className="bg-blue-400 transition-all" title={`2 BHK: ${p2.toFixed(0)}%`} />}
-        {p3 > 0 && <div style={{ width: `${p3}%` }} className="bg-indigo-500 transition-all" title={`3 BHK: ${p3.toFixed(0)}%`} />}
-        {p4 > 0 && <div style={{ width: `${p4}%` }} className="bg-violet-600 transition-all" title={`4+ BHK: ${p4.toFixed(0)}%`} />}
-      </div>
-      <div className="flex gap-4 mt-3 text-[10px] uppercase font-bold text-slate-500">
-        {p1 > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-300"></span> 1BHK ({p1.toFixed(0)}%)</div>}
-        {p2 > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> 2BHK ({p2.toFixed(0)}%)</div>}
-        {p3 > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> 3BHK ({p3.toFixed(0)}%)</div>}
-        {p4 > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-600"></span> 4+BHK ({p4.toFixed(0)}%)</div>}
-      </div>
-    </div>
-  );
-};
-
-export default function App() {
-  const [showPitch, setShowPitch] = useState(false);
-  const [showAiModal, setShowAiModal] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiReport, setAiReport] = useState("");
-
-  const [scenarioPrompt, setScenarioPrompt] = useState("");
-  const [isGeneratingScenario, setIsGeneratingScenario] = useState(false);
-  const [genError, setGenError] = useState(false);
-
-  // --- 1. INVENTORY & PROJECT STATE ---
-  const [totalUnits, setTotalUnits] = useState(500);
-  const [avgTicketSizeCr, setAvgTicketSizeCr] = useState(1.5);
-  const [avgCarpetAreaSqft, setAvgCarpetAreaSqft] = useState(850);
-  const [timelineMonths, setTimelineMonths] = useState(18);
-  const [mix, setMix] = useState({ bhk1: 10, bhk2: 50, bhk3: 30, bhk4: 10 });
-
-  // --- 2. COMMERCIALS ---
-  const [commissionPct, setCommissionPct] = useState(4.5);
-  const [performanceBonusPct, setPerformanceBonusPct] = useState(0.5);
-  const [cpSharePct, setCpSharePct] = useState(1.5); 
-
-  // --- 3. PERSONNEL (Monthly) ---
-  const [presalesCount, setPresalesCount] = useState(10);
-  const [presalesSalaryL, setPresalesSalaryL] = useState(0.3);
-  const [salesCount, setSalesCount] = useState(15);
-  const [salesSalaryL, setSalesSalaryL] = useState(0.6);
-  const [leadershipCount, setLeadershipCount] = useState(3);
-  const [leadershipSalaryL, setLeadershipSalaryL] = useState(1.5);
-
-  // --- 4. MARKETING & OVERHEADS (Monthly) ---
-  const [digitalMarketingL, setDigitalMarketingL] = useState(8); 
-  const [offlineMarketingL, setOfflineMarketingL] = useState(4); // Print, OOH, Radio
-  const [techCrmL, setTechCrmL] = useState(0.5); // LeadSquared, Salesforce
-  const [officeTravelL, setOfficeTravelL] = useState(1.5); 
-
-  // --- 5. ONE-TIME SETUP COSTS ---
-  const [experienceCenterL, setExperienceCenterL] = useState(30); // Site office setup
-  const [launchEventsL, setLaunchEventsL] = useState(15); // CP meets, kickoffs
-
-  const handleMixChange = (key, val) => setMix(prev => ({ ...prev, [key]: val }));
-
-  // --- CALCULATIONS ENGINE ---
-  const financials = useMemo(() => {
-    // Topline
-    const projectValue = totalUnits * avgTicketSizeCr * 10000000;
-    const totalCarpetArea = totalUnits * avgCarpetAreaSqft;
-    const baseRevenue = projectValue * (commissionPct / 100);
-    const bonusRevenue = projectValue * (performanceBonusPct / 100);
-    const grossRevenue = baseRevenue + bonusRevenue;
-    
-    // Leakage (Broker Payout)
-    const cpPayout = projectValue * (cpSharePct / 100);
-    const netRevenue = grossRevenue - cpPayout; // What mandate company keeps
-    
-    // Monthly OPEX
-    const personnelCostMo = (presalesCount * presalesSalaryL + salesCount * salesSalaryL + leadershipCount * leadershipSalaryL) * 100000;
-    const marketingCostMo = (digitalMarketingL + offlineMarketingL) * 100000;
-    const overheadCostMo = (techCrmL + officeTravelL) * 100000;
-    const totalMonthlyOpex = personnelCostMo + marketingCostMo + overheadCostMo;
-    
-    const totalOpex = totalMonthlyOpex * timelineMonths;
-    const totalOneTime = (experienceCenterL + launchEventsL) * 100000;
-    const totalCost = totalOpex + totalOneTime;
-    
-    // Profitability
-    const netProfit = netRevenue - totalCost;
-    const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
-    const profitMargin = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
-    
-    // Break-even Analysis
-    const effectiveNetMarginPct = (commissionPct + performanceBonusPct - cpSharePct) / 100;
-    const requiredSalesValueToBreakEven = effectiveNetMarginPct > 0 ? totalCost / effectiveNetMarginPct : Infinity;
-    const breakEvenUnits = requiredSalesValueToBreakEven / (avgTicketSizeCr * 10000000);
-    const breakEvenPercentage = (breakEvenUnits / totalUnits) * 100;
-
-    // Unit Economics
-    const totalMarketingSpend = (marketingCostMo * timelineMonths) + totalOneTime; // Includes events & setup as acquisition cost
-    const impliedCAC = totalUnits > 0 ? totalMarketingSpend / totalUnits : 0; 
-
-    return {
-      projectValue, totalCarpetArea, grossRevenue, baseRevenue, bonusRevenue, cpPayout, netRevenue,
-      totalCost, personnelCostMo, marketingCostMo, overheadCostMo, totalMonthlyOpex, totalOneTime,
-      netProfit, roi, profitMargin,
-      breakEvenUnits, breakEvenPercentage, requiredSalesValueToBreakEven, effectiveNetMarginPct,
-      impliedCAC, totalMarketingSpend
-    };
-  }, [
-    totalUnits, avgTicketSizeCr, avgCarpetAreaSqft, timelineMonths,
-    commissionPct, performanceBonusPct, cpSharePct,
-    presalesCount, presalesSalaryL, salesCount, salesSalaryL, leadershipCount, leadershipSalaryL,
-    digitalMarketingL, offlineMarketingL, techCrmL, officeTravelL,
-    experienceCenterL, launchEventsL
+  // App State
+  const [units, setUnits] = useState(generateInitialUnits());
+  const [leads, setLeads] = useState(initialLeads);
+  const [demands, setDemands] = useState(initialDemands);
+  const [selectedUnit, setSelectedUnit] = useState(null);
+  
+  // Form States
+  const [customerName, setCustomerName] = useState('');
+  const [tokenAmount, setTokenAmount] = useState('');
+  
+  // Modals & Chat States
+  const [showCopilot, setShowCopilot] = useState(false);
+  const [copilotInput, setCopilotInput] = useState('');
+  const [copilotMsgs, setCopilotMsgs] = useState([
+    { role: 'ai', text: "Hello! I'm your ERP Copilot. I have deep context into the inventory matrix, finance queue, and Ops BOQ. How can I assist?" }
   ]);
+  const chatEndRef = useRef(null);
 
-  // --- DYNAMIC INSIGHTS ENGINE ---
-  const insights = useMemo(() => {
-    let flags = [];
-    if (financials.effectiveNetMarginPct <= 0) {
-      flags.push({ type: 'danger', text: 'Critical Math Failure: Broker payouts exceed your builder commission. Guaranteed loss regardless of sales.' });
-    }
-    if (financials.breakEvenPercentage > 50) {
-      flags.push({ type: 'warning', text: `High Risk Velocity: You must sell ${Math.ceil(financials.breakEvenUnits)} units (${financials.breakEvenPercentage.toFixed(1)}%) just to cover OPEX. Average mandate safety net is < 35%.` });
-    }
-    if (financials.impliedCAC > (avgTicketSizeCr * 10000000 * 0.015)) {
-      flags.push({ type: 'warning', text: `High CAC: Your implied Marketing Cost per Acquisition is ${formatINR(financials.impliedCAC)}, which is >1.5% of ticket size. Re-evaluate marketing mix.` });
-    }
-    if (financials.totalMonthlyOpex > (financials.grossRevenue / timelineMonths) * 0.7) {
-      flags.push({ type: 'danger', text: 'Burn Rate Alert: Monthly OPEX is dangerously close to your average monthly gross revenue generation. Minimal room for market slumps.' });
-    }
-    if (financials.roi > 150) {
-      flags.push({ type: 'success', text: 'Stellar Economics: If assumptions hold, ROI exceeds 150%. Highly lucrative mandate parameters.' });
-    }
-    return flags;
-  }, [financials, avgTicketSizeCr, timelineMonths]);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [newLeadData, setNewLeadData] = useState({ name: '', phone: '', budget: '', source: 'Walk-in' });
 
-  // --- AI SCENARIO GENERATOR ---
-  const handleGenerateScenario = async () => {
-    if (!scenarioPrompt.trim()) return;
-    setIsGeneratingScenario(true);
-    setGenError(false);
-    
-    const apiKey = "";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-    
-    const promptText = `You are an elite real estate underwriter. Based on this project description: "${scenarioPrompt}", predict and generate realistic mandate underwriting parameters.
-    Respond ONLY with a raw, valid JSON object (no markdown, no formatting, no text outside the JSON).
-    {
-      "totalUnits": (number),
-      "avgTicketSizeCr": (number, e.g. 1.5),
-      "avgCarpetAreaSqft": (number),
-      "timelineMonths": (number),
-      "mix": { "bhk1": (number), "bhk2": (number), "bhk3": (number), "bhk4": (number) },
-      "commissionPct": (number),
-      "performanceBonusPct": (number),
-      "cpSharePct": (number),
-      "presalesCount": (number),
-      "salesCount": (number),
-      "leadershipCount": (number),
-      "digitalMarketingL": (number, monthly in Lakhs),
-      "offlineMarketingL": (number, monthly in Lakhs),
-      "techCrmL": (number, monthly in Lakhs),
-      "experienceCenterL": (number, one time setup in Lakhs),
-      "launchEventsL": (number, one time in Lakhs)
-    }`;
+  const [selectedEmailLead, setSelectedEmailLead] = useState(null);
 
-    const payload = {
-      contents: [{ parts: [{ text: promptText }] }],
-      generationConfig: { responseMimeType: "application/json" }
-    };
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [copilotMsgs]);
 
-    try {
-      let response;
-      let delay = 1000;
-      for (let i = 0; i < 5; i++) {
-        response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
-        if (response.ok) break;
-        await new Promise(r => setTimeout(r, delay));
-        delay *= 2;
-      }
-
-      if (!response.ok) throw new Error("API failed");
-      const data = await response.json();
-      let jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (jsonText) {
-         // Failsafe cleanup
-         jsonText = jsonText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '');
-         const params = JSON.parse(jsonText);
-         
-         if(params.totalUnits) setTotalUnits(params.totalUnits);
-         if(params.avgTicketSizeCr) setAvgTicketSizeCr(params.avgTicketSizeCr);
-         if(params.avgCarpetAreaSqft) setAvgCarpetAreaSqft(params.avgCarpetAreaSqft);
-         if(params.timelineMonths) setTimelineMonths(params.timelineMonths);
-         if(params.mix) setMix(params.mix);
-         if(params.commissionPct) setCommissionPct(params.commissionPct);
-         if(params.performanceBonusPct !== undefined) setPerformanceBonusPct(params.performanceBonusPct);
-         if(params.cpSharePct !== undefined) setCpSharePct(params.cpSharePct);
-         if(params.presalesCount) setPresalesCount(params.presalesCount);
-         if(params.salesCount) setSalesCount(params.salesCount);
-         if(params.leadershipCount !== undefined) setLeadershipCount(params.leadershipCount);
-         if(params.digitalMarketingL) setDigitalMarketingL(params.digitalMarketingL);
-         if(params.offlineMarketingL !== undefined) setOfflineMarketingL(params.offlineMarketingL);
-         if(params.techCrmL) setTechCrmL(params.techCrmL);
-         if(params.experienceCenterL) setExperienceCenterL(params.experienceCenterL);
-         if(params.launchEventsL) setLaunchEventsL(params.launchEventsL);
-         
-         setScenarioPrompt(""); 
-      }
-    } catch (err) {
-      console.error("AI Generation failed:", err);
-      setGenError(true);
-      setTimeout(() => setGenError(false), 3000);
-    } finally {
-      setIsGeneratingScenario(false);
-    }
+  // --- ACTIONS ---
+  const handleBlockUnit = () => {
+    if (!customerName || !tokenAmount) return alert("Please enter customer details.");
+    setUnits(units.map(u => u.id === selectedUnit.id ? { ...u, status: 'Blocked', customer: customerName, token_amount: parseInt(tokenAmount) } : u));
+    setSelectedUnit({...selectedUnit, status: 'Blocked', customer: customerName, token_amount: parseInt(tokenAmount)});
+    setCustomerName(''); setTokenAmount('');
   };
 
-  // --- AI CO-PILOT ENGINE ---
-  const runAIAnalysis = async () => {
-    setIsAnalyzing(true);
-    setShowAiModal(true);
-    setAiReport("");
-
-    const apiKey = ""; // The execution environment provides the key at runtime
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-    const promptText = `Analyze this real estate mandate deal:
-    - Project Value: ₹${(financials.projectValue / 10000000).toFixed(2)} Cr
-    - Builder Commission: ${commissionPct}% + ${performanceBonusPct}% Bonus
-    - Broker Payout (Leakage): ${cpSharePct}%
-    - Total Monthly OPEX: ₹${(financials.totalMonthlyOpex / 100000).toFixed(2)} Lakhs over ${timelineMonths} months
-    - Setup & Launch Cost: ₹${(financials.totalOneTime / 100000).toFixed(2)} Lakhs
-    - Projected Net Profit: ₹${(financials.netProfit / 10000000).toFixed(2)} Cr
-    - ROI: ${financials.roi.toFixed(1)}%
-    - Break-even Units: ${Math.ceil(financials.breakEvenUnits)} out of ${totalUnits} (${financials.breakEvenPercentage.toFixed(1)}%)
-    - Implied CAC: ₹${financials.impliedCAC.toLocaleString('en-IN', {maximumFractionDigits:0})} per unit.
-
-    Give a brutally honest, punchy 3-bullet point strategic recommendation for the Mandate firm's CEO. Tell them whether to sign this term sheet, negotiate, or walk away. Keep it under 100 words. Format with markdown.`;
-
-    const payload = {
-      contents: [{ parts: [{ text: promptText }] }],
-      systemInstruction: { parts: [{ text: "You are an elite, aggressive real estate underwriter analyzing mandate deals. You are sharp, direct, and focused strictly on risk, burn rate, and margins. Do not use pleasantries." }] }
-    };
-
-    try {
-      let response;
-      let delay = 1000;
-      // Exponential backoff retry
-      for (let i = 0; i < 5; i++) {
-        response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
-        if (response.ok) break;
-        await new Promise(r => setTimeout(r, delay));
-        delay *= 2;
-      }
-
-      if (!response.ok) throw new Error("API failed");
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No insights generated.";
-      setAiReport(text);
-    } catch (err) {
-      setAiReport("⚠️ Quantum AI is currently unavailable or experiencing high traffic. Please try again.");
-    } finally {
-      setIsAnalyzing(false);
-    }
+  const handleApproveToken = (unitId) => {
+    setUnits(units.map(u => u.id === unitId ? { ...u, status: 'Booked' } : u));
+    if (selectedUnit?.id === unitId) setSelectedUnit({...selectedUnit, status: 'Booked'});
   };
 
-  return (
-    <div className="min-h-screen bg-[#F4F7FB] text-slate-900 font-sans selection:bg-indigo-200 selection:text-indigo-900 pb-20">
+  const handleCancelBlock = (unitId) => {
+    setUnits(units.map(u => u.id === unitId ? { ...u, status: 'Available', customer: null, token_amount: 0 } : u));
+    if (selectedUnit?.id === unitId) setSelectedUnit({...selectedUnit, status: 'Available', customer: null, token_amount: 0});
+  };
+
+  const updateLeadStatus = (leadId, newStatus) => {
+    setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+  };
+
+  const handleRecordPayment = (demandId) => {
+    setDemands(demands.map(d => d.id === demandId ? { ...d, status: 'Paid' } : d));
+  };
+
+  const handleAddLead = (e) => {
+    e.preventDefault();
+    if(!newLeadData.name) return;
+    const newLead = {
+      id: `L-${1000 + leads.length + 1}`,
+      ...newLeadData,
+      status: 'New',
+      ai_score: Math.floor(Math.random() * 40) + 50,
+      ai_action: "New organic lead. Qualify requirements."
+    };
+    setLeads([...leads, newLead]);
+    setIsLeadModalOpen(false);
+    setNewLeadData({ name: '', phone: '', budget: '', source: 'Walk-in' });
+  };
+
+  const handleAutoGenerateDemands = () => {
+    const bookedUnits = units.filter(u => u.status === 'Booked');
+    const newDemands = bookedUnits.map((u, i) => ({
+      id: `D-${600 + demands.length + i}`,
+      unitId: u.id,
+      customer: u.customer || 'Customer',
+      amount: Math.floor(u.base_rate * u.carpet_area * 0.10), // 10% milestone
+      milestone: 'Slab 1 Casting',
+      dueDate: '2026-05-15',
+      status: 'Pending',
+      ai_risk: 'Low (5%)'
+    }));
+    setDemands([...demands, ...newDemands]);
+    alert(`${newDemands.length} new demands generated successfully for Slab 1 Casting milestone.`);
+  };
+
+  const handleCopilotSubmit = (e) => {
+    e.preventDefault();
+    if (!copilotInput.trim()) return;
+    
+    const userMsg = copilotInput.trim();
+    setCopilotMsgs(prev => [...prev, { role: 'user', text: userMsg }]);
+    setCopilotInput('');
+
+    // AI Logic Engine responding to local state
+    setTimeout(() => {
+      let aiResponse = "I've analyzed the current module data. I can help you filter reports or take bulk actions.";
+      const q = userMsg.toLowerCase();
       
-      {/* HEADER */}
-      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 ring-2 ring-indigo-50">
-              <Activity className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none">Quantum<span className="text-indigo-600 font-light">Mandate</span></h1>
-              <p className="text-xs font-bold tracking-[0.2em] text-slate-400 uppercase mt-1">Enterprise Risk & P&L Engine</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setShowPitch(!showPitch)}
-            className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-slate-50 hover:bg-indigo-50 px-5 py-2.5 rounded-full border border-slate-200 hover:border-indigo-200 shadow-sm"
-          >
-            <Lightbulb className="w-4 h-4" />
-            Strategic Rationale
+      if (q.includes('3bhk') || q.includes('available')) {
+        const count = units.filter(u => u.type === '3BHK' && u.status === 'Available').length;
+        aiResponse = `I found **${count} available 3BHK units** in Tower A currently. Would you like me to highlight them in the matrix?`;
+      } else if (q.includes('delay') || q.includes('token') || q.includes('queue')) {
+        const pending = units.filter(u => u.status === 'Blocked');
+        aiResponse = `There are currently **${pending.length} units** pending token verification in the Finance queue. The total unverified token value is ${formatCurrency(pending.reduce((a,b)=>a+(b.token_amount||0),0))}.`;
+      } else if (q.includes('cement') || q.includes('boq')) {
+        const cement = initialBoq.find(b => b.category === 'Cement');
+        aiResponse = `Cement BOQ is currently marked as **${cement.status}**. The actual rate is ${formatCurrency(cement.act_rate)} vs the estimated ${formatCurrency(cement.est_rate)}, causing a variance.`;
+      } else if (q.includes('lead') || q.includes('prospect')) {
+        const hot = leads.filter(l => l.ai_score >= 90).length;
+        aiResponse = `You have **${hot} high-intent leads** (Score > 90) in the pipeline waiting for follow-ups.`;
+      }
+
+      setCopilotMsgs(prev => [...prev, { role: 'ai', text: aiResponse }]);
+    }, 600);
+  };
+
+  // --- CALCULATIONS ---
+  const generateCostSheet = (unit) => {
+    const agreementValue = unit.carpet_area * unit.base_rate;
+    const stampDuty = agreementValue * 0.06;
+    const gst = agreementValue * 0.05;
+    const infraCharges = 350000;
+    return { agreementValue, stampDuty, gst, infraCharges, total: agreementValue + stampDuty + gst + infraCharges };
+  };
+
+  const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  const formatNumber = (val) => new Intl.NumberFormat('en-IN').format(val);
+
+  const metrics = useMemo(() => {
+    const inv = units.reduce((acc, curr) => {
+      acc.total++;
+      if (curr.status === 'Available') acc.available++;
+      if (curr.status === 'Blocked') acc.blocked++;
+      if (curr.status === 'Booked') acc.booked++;
+      if (curr.status === 'Booked' || curr.status === 'Blocked') acc.totalValue += (curr.carpet_area * curr.base_rate);
+      return acc;
+    }, { total: 0, available: 0, blocked: 0, booked: 0, totalValue: 0 });
+
+    const col = demands.reduce((acc, curr) => {
+      acc.totalDemanded += curr.amount;
+      if (curr.status === 'Overdue') acc.totalOverdue += curr.amount;
+      if (curr.status === 'Paid') acc.totalCollected += curr.amount;
+      return acc;
+    }, { totalDemanded: 0, totalOverdue: 0, totalCollected: 0 });
+
+    return { inv, col };
+  }, [units, demands]);
+
+  // --- SUB-COMPONENTS ---
+  const MetricCard = ({ title, value, subtitle, icon: Icon, colorClass, trend }) => (
+    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md group">
+      <div className="flex justify-between items-start mb-3">
+        <div className={`p-2.5 rounded-lg ${colorClass} bg-opacity-15 transition-transform group-hover:scale-105 duration-200`}>
+          <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-').replace('-100', '-600')}`} />
+        </div>
+        {trend && (
+          <span className="flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
+            <TrendingUp className="w-3 h-3 mr-1" /> {trend}
+          </span>
+        )}
+      </div>
+      <h3 className="text-slate-500 text-[11px] font-bold tracking-widest uppercase">{title}</h3>
+      <p className="text-2xl font-extrabold text-slate-800 mt-1 tracking-tight">{value}</p>
+      {subtitle && <p className="text-[11px] text-slate-400 mt-1.5 font-medium">{subtitle}</p>}
+    </div>
+  );
+
+  const DashboardView = () => (
+    <div className="p-6 space-y-6 overflow-y-auto h-full bg-slate-50/50 flex-1">
+      <div className="flex justify-between items-end">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Command Center</h2>
+          <p className="text-slate-500 mt-1 text-[13px] font-medium">Real-time performance across OP Altura</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setAiEnabled(!aiEnabled)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${aiEnabled ? 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+            <Sparkles className="w-3.5 h-3.5" /> {aiEnabled ? 'AI Enabled' : 'AI Disabled'}
+          </button>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm">
+            <Download className="w-3.5 h-3.5" /> Export
           </button>
         </div>
-      </header>
-
-      {/* VALUE PROPOSITION DRAWER */}
-      {showPitch && (
-        <div className="bg-slate-900 text-white border-b border-slate-800 animate-in slide-in-from-top-4 duration-300 shadow-2xl relative z-40">
-          <div className="max-w-[1600px] mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div>
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><BriefcaseBusiness className="w-5 h-5"/> Underwriting for Mandates</h3>
-              <p className="text-sm text-slate-300 leading-relaxed font-medium">Stop signing terms based on top-line vanity. This engine forces you to account for pre-sales headcount, tech stack, and experience center setups to reveal true net margins and absolute break-even units.</p>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><Users className="w-5 h-5"/> Broker Transition Protection</h3>
-              <p className="text-sm text-slate-300 leading-relaxed font-medium">Moving from pure brokerage to sole-selling? A 5% commission sounds huge until you realize you bear the digital marketing CAC and CP payouts. Protect your downside before taking the plunge.</p>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-400"><Building className="w-5 h-5"/> Developer Empathy Math</h3>
-              <p className="text-sm text-slate-300 leading-relaxed font-medium">Use this tool to show builders exactly *why* you need a 5% mandate. Visually prove how much capital you are risking on marketing and salaries to sell their inventory.</p>
-            </div>
+      </div>
+      
+      {aiEnabled && (
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-700 p-5 rounded-xl text-white shadow-md flex items-start gap-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          <div className="bg-white/20 p-2.5 rounded-lg backdrop-blur-sm shrink-0 border border-white/10">
+            <BrainCircuit className="w-5 h-5 text-white" />
+          </div>
+          <div className="z-10">
+            <h4 className="font-bold text-[13px] flex items-center gap-1.5 tracking-wide">OP Copilot Briefing</h4>
+            <p className="text-indigo-50 mt-1 text-[13px] max-w-4xl leading-relaxed font-medium">
+              Sales velocity is up 15% WoW. Tower A 3BHKs show high demand; consider a +2% rate revision. We have {formatCurrency(metrics.col.totalOverdue)} in overdue collections with a high probability of default—recommend auto-dispatching escalation emails.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Removed "items-start" from this grid container so the 5-column right pane
-        stretches full height. This prevents the sticky dashboard from scrolling out of view.
-      */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 xl:grid-cols-12 gap-8">
-        
-        {/* LEFT COLUMN: THE WORKSPACE (7 Cols) */}
-        <div className="xl:col-span-7 space-y-6">
-          
-          {/* AI SCENARIO BUILDER */}
-          <section className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-950 rounded-3xl p-1 shadow-lg relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-500"></div>
-            <div className="bg-slate-950 rounded-[22px] p-6 relative z-10 border border-indigo-500/20">
-              <div className="flex items-start gap-4 flex-col md:flex-row">
-                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 flex-shrink-0">
-                  <Wand2 className="w-6 h-6 text-indigo-400" />
-                </div>
-                <div className="flex-grow w-full">
-                  <h2 className="text-lg font-bold text-white mb-1 tracking-tight">AI Auto-Build Scenario</h2>
-                  <p className="text-sm text-slate-400 mb-4 font-medium">Describe the project. Quantum AI will instantly predict and set all 15+ benchmark parameters below.</p>
-                  
-                  <div className="flex gap-2 relative flex-col sm:flex-row">
-                    <input 
-                      type="text" 
-                      value={scenarioPrompt}
-                      onChange={(e) => setScenarioPrompt(e.target.value)}
-                      placeholder="e.g. 800 luxury villas in Goa, highly dependent on outside brokers..."
-                      className="w-full bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateScenario(); }}
-                      disabled={isGeneratingScenario}
-                    />
-                    <button
-                      onClick={handleGenerateScenario}
-                      disabled={isGeneratingScenario || !scenarioPrompt.trim()}
-                      className={`px-6 py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 flex-shrink-0 w-full sm:w-auto
-                        ${genError ? 'bg-rose-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white disabled:bg-slate-800 disabled:text-slate-500'}`}
-                    >
-                      {isGeneratingScenario ? <Loader2 className="w-4 h-4 animate-spin" /> : (genError ? <AlertCircle className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />)}
-                      <span className="">
-                        {isGeneratingScenario ? 'Building...' : (genError ? 'Failed!' : 'Generate')}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* SEC 1: INVENTORY MODELING */}
-          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-              <div className="p-2 bg-blue-50 rounded-lg"><Layers className="w-6 h-6 text-blue-600" /></div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">Project & Inventory Model</h2>
-                <p className="text-sm text-slate-500 font-medium">Total scale and unit economics.</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-              <SliderField label="Total Number of Units" value={totalUnits} min={50} max={2000} step={10} onChange={setTotalUnits} formatSuffix=" Units" color="blue" icon={Building}/>
-              <SliderField label="Avg Ticket Size (Per Unit)" value={avgTicketSizeCr} min={0.2} max={10} step={0.1} onChange={setAvgTicketSizeCr} formatPrefix="₹ " formatSuffix=" Cr" color="blue" icon={Coins}/>
-              <div className="md:col-span-2 mt-2">
-                <SliderField label="Avg Carpet Area" value={avgCarpetAreaSqft} min={300} max={5000} step={50} onChange={setAvgCarpetAreaSqft} formatSuffix=" Sq.Ft" color="slate" icon={MapPin}/>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-slate-100">
-              <p className="text-sm font-semibold text-slate-700 tracking-tight mb-4">Unit Typology Weighting (Visual Mix)</p>
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">1 BHK</label>
-                  <input type="number" value={mix.bhk1} onChange={(e) => handleMixChange('bhk1', parseInt(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">2 BHK</label>
-                  <input type="number" value={mix.bhk2} onChange={(e) => handleMixChange('bhk2', parseInt(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">3 BHK</label>
-                  <input type="number" value={mix.bhk3} onChange={(e) => handleMixChange('bhk3', parseInt(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">4+ BHK</label>
-                  <input type="number" value={mix.bhk4} onChange={(e) => handleMixChange('bhk4', parseInt(e.target.value) || 0)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                </div>
-              </div>
-              <UnitMixBar mix={mix} />
-            </div>
-            
-            <div className="mt-6 bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
-              <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Calculated Project Value</p>
-                <p className="text-xl font-black text-slate-800">{formatINR(financials.projectValue)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Saleable Area</p>
-                <p className="text-xl font-black text-slate-800">{(financials.totalCarpetArea).toLocaleString('en-IN')} <span className="text-sm font-semibold text-slate-500">Sq.Ft</span></p>
-              </div>
-            </div>
-          </section>
-
-          {/* SEC 2: COMMERCIALS */}
-          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 hover:shadow-md transition-shadow">
-             <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-              <div className="p-2 bg-emerald-50 rounded-lg"><Target className="w-6 h-6 text-emerald-600" /></div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">Mandate Commercials</h2>
-                <p className="text-sm text-slate-500 font-medium">Inflows and direct broker leakages.</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-              <SliderField label="Builder Base Commission" value={commissionPct} min={1} max={15} step={0.1} onChange={setCommissionPct} formatSuffix="%" helperText="Fixed mandate fee." color="emerald" />
-              <SliderField label="Performance/Target Bonus" value={performanceBonusPct} min={0} max={5} step={0.1} onChange={setPerformanceBonusPct} formatSuffix="%" helperText="Kicker for speed/volume." color="emerald" />
-            </div>
-            <div className="pt-4 mt-2">
-              <SliderField label="Channel Partner (CP) Payout" value={cpSharePct} min={0} max={10} step={0.1} onChange={setCpSharePct} formatSuffix="%" helperText="Brokerage passed to market network." color="rose" />
-            </div>
-          </section>
-
-          {/* SEC 3: HUMAN RESOURCES */}
-          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 hover:shadow-md transition-shadow">
-             <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-              <div className="p-2 bg-indigo-50 rounded-lg"><Users className="w-6 h-6 text-indigo-600" /></div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">Resource & Personnel OPEX</h2>
-                <p className="text-sm text-slate-500 font-medium">Monthly headcount burn.</p>
-              </div>
-            </div>
-            
-            <SliderField label="Project Selling Timeline" value={timelineMonths} min={3} max={48} step={1} onChange={setTimelineMonths} formatSuffix=" Months" helperText="Total months carrying these costs." color="indigo" />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-4 border-t border-slate-100 mt-2">
-              <div>
-                <SliderField label="Pre-Sales / Call Center Count" value={presalesCount} min={0} max={100} step={1} onChange={setPresalesCount} color="indigo" icon={Headset}/>
-                <SliderField label="Pre-Sales Salary (Avg/Mo)" value={presalesSalaryL} min={0.1} max={1} step={0.05} onChange={setPresalesSalaryL} formatPrefix="₹ " formatSuffix=" L" color="indigo"/>
-              </div>
-              <div>
-                <SliderField label="Sales Closers / Site Staff" value={salesCount} min={0} max={100} step={1} onChange={setSalesCount} color="indigo" icon={Users}/>
-                <SliderField label="Closer Salary (Avg/Mo)" value={salesSalaryL} min={0.2} max={3} step={0.1} onChange={setSalesSalaryL} formatPrefix="₹ " formatSuffix=" L" color="indigo"/>
-              </div>
-              <div className="md:col-span-2 grid md:grid-cols-2 gap-8 pt-4 border-t border-slate-50">
-                <SliderField label="Leadership / Management Count" value={leadershipCount} min={0} max={20} step={1} onChange={setLeadershipCount} color="indigo" icon={BriefcaseBusiness}/>
-                <SliderField label="Leadership Salary (Avg/Mo)" value={leadershipSalaryL} min={0.5} max={10} step={0.25} onChange={setLeadershipSalaryL} formatPrefix="₹ " formatSuffix=" L" color="indigo"/>
-              </div>
-            </div>
-            <div className="mt-6 bg-slate-50 p-4 rounded-xl border border-slate-200 text-right">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Monthly Payroll</p>
-              <p className="text-lg font-black text-indigo-700">{formatINR(financials.personnelCostMo)} <span className="text-sm font-semibold text-slate-500">/ mo</span></p>
-            </div>
-          </section>
-
-          {/* SEC 4: MARKETING & SETUP */}
-          <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 hover:shadow-md transition-shadow">
-             <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-              <div className="p-2 bg-orange-50 rounded-lg"><Megaphone className="w-6 h-6 text-orange-600" /></div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">Marketing & Capital Setup</h2>
-                <p className="text-sm text-slate-500 font-medium">Acquisition costs and physical presence.</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 pt-2">
-              <SliderField label="Digital & Meta Ads (Monthly)" value={digitalMarketingL} min={0} max={100} step={1} onChange={setDigitalMarketingL} formatPrefix="₹ " formatSuffix=" L" color="orange" icon={MonitorSmartphone}/>
-              <SliderField label="Print, OOH, Radio (Monthly)" value={offlineMarketingL} min={0} max={100} step={1} onChange={setOfflineMarketingL} formatPrefix="₹ " formatSuffix=" L" color="orange" icon={MapPin}/>
-              <SliderField label="Tech Stack / CRM (Monthly)" value={techCrmL} min={0} max={10} step={0.1} onChange={setTechCrmL} formatPrefix="₹ " formatSuffix=" L" color="slate" />
-              <SliderField label="Office & Overheads (Monthly)" value={officeTravelL} min={0} max={20} step={0.5} onChange={setOfficeTravelL} formatPrefix="₹ " formatSuffix=" L" color="slate" />
-            </div>
-
-            <div className="pt-6 border-t border-slate-100 mt-4 bg-orange-50/30 -mx-8 px-8 pb-4 rounded-b-3xl">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">One-Time Capital Expenditure</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                <SliderField label="Site Experience Center Setup" value={experienceCenterL} min={0} max={300} step={5} onChange={setExperienceCenterL} formatPrefix="₹ " formatSuffix=" L" color="orange" helperText="Sample flats, immersive lounge."/>
-                <SliderField label="Mega Launch Events" value={launchEventsL} min={0} max={200} step={5} onChange={setLaunchEventsL} formatPrefix="₹ " formatSuffix=" L" color="orange" helperText="Broker kickoffs, channel partner meets."/>
-              </div>
-            </div>
-          </section>
-
+      <div>
+        <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><LayoutDashboard className="w-3.5 h-3.5"/> Sales Pipeline</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard title="Total Inventory" value={`${metrics.inv.total}`} subtitle="Across 1 active tower" icon={Building} colorClass="bg-blue-100" />
+          <MetricCard title="Units Sold" value={`${metrics.inv.booked}`} subtitle={`${metrics.inv.available} units remaining`} icon={CheckCircle} colorClass="bg-emerald-100" trend="+12% WoW" />
+          <MetricCard title="Pending Verifications" value={`${metrics.inv.blocked}`} subtitle="Awaiting Finance Check" icon={Clock} colorClass="bg-amber-100" />
+          <MetricCard title="Pipeline Value" value={formatCurrency(metrics.inv.totalValue)} subtitle="Total Booked & Blocked" icon={IndianRupee} colorClass="bg-indigo-100" />
         </div>
+      </div>
 
-        {/* RIGHT COLUMN: STICKY HUD / DASHBOARD (5 Cols) */}
-        <div className="xl:col-span-5 relative">
-          
-          {/* Scrollable sticky wrapper so it works on small laptop heights */}
-          <div className="sticky top-24 space-y-6 pb-8 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            
-            {/* The Master Readout (Deep Dark Glassmorphism) */}
-            <div className="bg-slate-950 text-white rounded-3xl shadow-2xl shadow-indigo-900/20 overflow-hidden relative border border-slate-800">
-              {/* Glossy gradient effects */}
-              <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute -top-32 -right-32 w-96 h-96 bg-indigo-600 opacity-20 rounded-full blur-[100px]"></div>
-                <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-emerald-500 opacity-10 rounded-full blur-[100px]"></div>
-              </div>
+      <div className="pt-2">
+        <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5"/> Finance Health</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MetricCard title="Total Demanded" value={formatCurrency(metrics.col.totalDemanded)} subtitle="Construction-linked billing" icon={FileSpreadsheet} colorClass="bg-slate-100" />
+          <MetricCard title="Overdue Collections" value={formatCurrency(metrics.col.totalOverdue)} subtitle="High priority follow-ups" icon={AlertTriangle} colorClass="bg-rose-100" />
+          <MetricCard title="Amount Reconciled" value={formatCurrency(metrics.col.totalCollected)} subtitle="Bank verified receipts" icon={ShieldCheck} colorClass="bg-emerald-100" />
+        </div>
+      </div>
+    </div>
+  );
 
-              <div className="p-8 relative z-10">
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-slate-400 font-bold tracking-[0.2em] text-[10px] uppercase flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-indigo-400"/> Live Financial Output
-                  </h3>
-                  <div className="px-3 py-1 bg-white/10 rounded-full backdrop-blur-md text-xs font-bold text-white border border-white/10">
-                    {timelineMonths} Mo. Projection
-                  </div>
+  const LeadManagementView = () => {
+    const columns = ['New', 'Contacted', 'Site Visit', 'Negotiation'];
+    
+    return (
+      <div className="flex flex-col h-full bg-slate-50/50 flex-1 overflow-hidden relative">
+        <div className="px-6 py-5 shrink-0 flex justify-between items-center bg-white border-b border-slate-200 z-10">
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Pre-Sales CRM</h2>
+            <p className="text-slate-500 text-[13px] mt-0.5 font-medium">Manage prospects and track conversions</p>
+          </div>
+          <button 
+            onClick={() => setIsLeadModalOpen(true)}
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-slate-800 transition-all flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4"/> New Lead
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-6 hide-scrollbar">
+          <div className="flex gap-5 h-full w-max">
+            {columns.map(colStatus => (
+              <div key={colStatus} className="bg-slate-100/60 rounded-xl w-[280px] flex flex-col h-full border border-slate-200/80">
+                <div className="p-3 border-b border-slate-200/80 flex justify-between items-center bg-slate-100 rounded-t-xl shrink-0">
+                  <h3 className="font-extrabold text-slate-700 text-[11px] uppercase tracking-widest">{colStatus}</h3>
+                  <span className="bg-white text-slate-600 text-[10px] font-black px-2 py-0.5 rounded shadow-sm border border-slate-200">
+                    {leads.filter(l => l.status === colStatus).length}
+                  </span>
                 </div>
                 
-                <div className="mb-10">
-                  <p className="text-slate-400 text-sm font-semibold mb-2 uppercase tracking-wider">Projected Net Profit</p>
-                  <div className="flex items-baseline gap-3">
-                    <span className={`text-6xl lg:text-7xl font-black tracking-tighter ${financials.netProfit >= 0 ? 'text-white' : 'text-rose-400'}`}>
-                      {financials.netProfit >= 0 ? '' : '-'}{formatINR(Math.abs(financials.netProfit))}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6 mb-8 pb-8 border-b border-slate-800/80">
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Return on Inv (ROI)</p>
-                    <p className={`text-3xl font-black tracking-tight ${financials.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {financials.roi.toFixed(1)}%
-                    </p>
-                  </div>
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Net Margin (Rev)</p>
-                    <p className={`text-3xl font-black tracking-tight ${financials.profitMargin >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {financials.profitMargin.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Capital Flow Waterfall */}
-                <div className="space-y-4 font-medium">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400 flex items-center gap-2">Gross Revenue <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded">In</span></span>
-                    <span className="font-bold text-slate-200">{formatINR(financials.grossRevenue)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400 flex items-center gap-2">
-                      CP Payouts <span className="text-[10px] bg-rose-900/50 text-rose-300 px-2 py-0.5 rounded">Out</span>
-                    </span>
-                    <span className="font-bold text-rose-400">-{formatINR(financials.cpPayout)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-400 flex items-center gap-2">
-                      Total Burn (OPEX + Setup) <span className="text-[10px] bg-rose-900/50 text-rose-300 px-2 py-0.5 rounded">Out</span>
-                    </span>
-                    <span className="font-bold text-rose-400">-{formatINR(financials.totalCost)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Secondary Metrics Footer */}
-              <div className="bg-black/40 backdrop-blur-xl border-t border-slate-800/80 p-6 relative z-10 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Break-even Point</p>
-                  <p className="text-2xl font-black text-white tracking-tight flex items-baseline gap-1">
-                    {financials.breakEvenUnits !== Infinity ? Math.ceil(financials.breakEvenUnits) : 'N/A'}
-                    <span className="text-sm font-semibold text-slate-500">Units</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Implied CAC</p>
-                  <p className="text-xl font-bold text-orange-400 tracking-tight">
-                    {formatINR(financials.impliedCAC)}<span className="text-xs text-slate-500">/unit</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Dynamic Insights Engine */}
-            {insights.length > 0 && (
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 flex flex-col gap-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
-                  <h3 className="font-bold text-slate-900 tracking-tight">Intelligence Engine</h3>
-                </div>
-                {insights.map((insight, i) => (
-                  <div key={i} className={`p-4 rounded-2xl text-sm font-semibold leading-relaxed flex items-start gap-3 border shadow-sm
-                    ${insight.type === 'danger' ? 'bg-rose-50 text-rose-800 border-rose-200 shadow-rose-100/50' : ''}
-                    ${insight.type === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200 shadow-amber-100/50' : ''}
-                    ${insight.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200 shadow-emerald-100/50' : ''}
-                  `}>
-                    <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 
-                      ${insight.type === 'danger' ? 'text-rose-500' : ''}
-                      ${insight.type === 'warning' ? 'text-amber-500' : ''}
-                      ${insight.type === 'success' ? 'text-emerald-500' : ''}
-                    `} />
-                    <p>{insight.text}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* SEC 5: NEGOTIATION MATRIX (Moved to the Right Pane) */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/60 ring-1 ring-slate-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500 opacity-5 rounded-full blur-[60px] transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-              
-              <div className="mb-5">
-                <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-rose-500" /> Builder Squeeze Stress Test
-                </h2>
-                <p className="text-slate-500 text-xs mt-1 font-medium leading-relaxed">
-                  At the final table, builders compress your base commission. See how drops affect your absolute break-even point.
-                </p>
-              </div>
-
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
-                    <tr>
-                      <th className="px-3 py-3 border-b border-slate-200">Comm. Drop</th>
-                      <th className="px-3 py-3 border-b border-slate-200 text-right">Net Profit</th>
-                      <th className="px-3 py-3 border-b border-slate-200 text-right">Break-Even</th>
-                      <th className="px-3 py-3 border-b border-slate-200 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white text-xs">
-                    {[0, 0.5, 1.0, 1.5, 2.0].map((drop, idx) => {
-                      const testComm = commissionPct - drop;
-                      const testBaseRev = financials.projectValue * (testComm / 100);
-                      const testNetRev = (testBaseRev + financials.bonusRevenue) - financials.cpPayout;
-                      const testProfit = testNetRev - financials.totalCost;
-                      const testNetMargin = (testComm + performanceBonusPct - cpSharePct) / 100;
+                <div className="p-3 overflow-y-auto flex-1 space-y-3 hide-scrollbar">
+                  {leads.filter(l => l.status === colStatus).map(lead => (
+                    <div key={lead.id} className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 hover:border-violet-300 hover:shadow-md transition-all duration-200 group relative">
+                      <div className="flex justify-between items-start mb-2.5">
+                        <h4 className="font-bold text-slate-900 text-[13px]">{lead.name}</h4>
+                        {aiEnabled && (
+                          <div className={`flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded border ${lead.ai_score > 90 ? 'bg-rose-50 text-rose-600 border-rose-100' : lead.ai_score > 70 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                            <Sparkles className="w-2.5 h-2.5" /> {lead.ai_score}
+                          </div>
+                        )}
+                      </div>
                       
-                      const reqSalesVal = testNetMargin > 0 ? financials.totalCost / testNetMargin : Infinity;
-                      const testBEUnits = reqSalesVal / (avgTicketSizeCr * 10000000);
-                      
-                      const isBase = drop === 0;
+                      <div className="space-y-1.5 mb-3">
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500"><Phone className="w-3 h-3 text-slate-400"/> {lead.phone}</div>
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500"><IndianRupee className="w-3 h-3 text-slate-400"/> {lead.budget}</div>
+                           <div className="text-[10px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{lead.source}</div>
+                        </div>
+                      </div>
 
-                      return (
-                        <tr key={idx} className={`transition-colors hover:bg-slate-50 ${isBase ? 'bg-indigo-50/40' : ''}`}>
-                          <td className="px-3 py-3 font-bold text-slate-900 flex items-center gap-2">
-                            {testComm.toFixed(1)}% 
-                            {isBase && <span className="text-[9px] uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-sm shadow-sm">Current</span>}
-                            {!isBase && <span className="text-[9px] font-bold text-rose-600 flex items-center bg-rose-50 px-1.5 py-0.5 rounded-sm border border-rose-100"><TrendingDown className="w-2.5 h-2.5 mr-0.5"/>-{drop}%</span>}
-                          </td>
-                          <td className={`px-3 py-3 text-right font-bold tracking-tight ${testProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {testProfit >= 0 ? '+' : '-'}{formatINR(Math.abs(testProfit))}
-                          </td>
-                          <td className="px-3 py-3 text-right font-bold text-slate-700">
-                             {testBEUnits !== Infinity && testBEUnits > 0 ? (
-                               <span className={testBEUnits > totalUnits ? 'text-rose-500' : ''}>
-                                 {Math.ceil(testBEUnits)} / {totalUnits}
-                               </span>
-                             ) : <span className="text-rose-500">Impossible</span>}
-                          </td>
-                          <td className="px-3 py-3 flex justify-center">
-                            {testProfit >= 0 ? (
-                              testBEUnits > totalUnits ? (
-                                <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 tooltip" title="Requires >100% sales to break even">
-                                  <AlertCircle className="w-3 h-3"/>
-                                </div>
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 ring-2 ring-emerald-50">
-                                  <CheckCircle2 className="w-3 h-3"/>
-                                </div>
-                              )
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 ring-2 ring-rose-50">
-                                <AlertCircle className="w-3 h-3"/>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                      {aiEnabled && (
+                        <div className="bg-violet-50/50 p-2.5 rounded border border-violet-100 mb-3 cursor-pointer hover:bg-violet-50 transition-colors" onClick={() => setSelectedEmailLead(lead)}>
+                          <div className="flex items-center justify-between mb-1">
+                             <div className="flex items-center gap-1 text-violet-800 text-[9px] font-black uppercase tracking-widest">
+                               <BrainCircuit className="w-2.5 h-2.5" /> Action Suggestion
+                             </div>
+                             <div className="opacity-0 group-hover:opacity-100 transition-opacity"><Mail className="w-3 h-3 text-violet-400"/></div>
+                          </div>
+                          <p className="text-[11px] text-violet-700 leading-tight font-medium">{lead.ai_action}</p>
+                        </div>
+                      )}
 
-            {/* AI Co-Pilot Trigger */}
-            <button
-              onClick={runAIAnalysis}
-              className="w-full relative group overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-950 p-1 rounded-3xl shadow-xl transition-all hover:scale-[1.02] hover:shadow-indigo-900/30"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 opacity-40 group-hover:opacity-100 transition-opacity blur"></div>
-              <div className="relative bg-slate-950 text-white rounded-[22px] p-5 flex items-center justify-between border border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 text-indigo-400">
-                    <Bot className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold tracking-tight">Quantum AI Analyst</p>
-                    <p className="text-xs text-slate-400">Generate CEO Deal Memo</p>
-                  </div>
+                      {(role === ROLES.PRE_SALES || role === ROLES.MANAGEMENT || role === ROLES.SALES) && (
+                        <div className="pt-2 border-t border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <select 
+                            className="w-full text-[11px] border border-slate-200 rounded p-1.5 bg-slate-50 text-slate-700 font-bold outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer"
+                            value={lead.status}
+                            onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                          >
+                            <option value="" disabled>Move to...</option>
+                            {columns.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <Sparkles className="w-5 h-5 text-indigo-400 group-hover:text-emerald-400 transition-colors" />
               </div>
-            </button>
-
+            ))}
           </div>
+        </div>
+
+        {/* Modals */}
+        {isLeadModalOpen && (
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-2xl w-[400px] border border-slate-200 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-slate-800 text-sm">Add New Lead</h3>
+                <button onClick={() => setIsLeadModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4"/></button>
+              </div>
+              <form onSubmit={handleAddLead} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Customer Name</label>
+                  <input required type="text" className="w-full text-sm p-2 border border-slate-200 rounded outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phone</label>
+                     <input required type="text" className="w-full text-sm p-2 border border-slate-200 rounded outline-none focus:border-violet-500" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} />
+                   </div>
+                   <div>
+                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Budget</label>
+                     <input required type="text" placeholder="e.g. 1.2 Cr" className="w-full text-sm p-2 border border-slate-200 rounded outline-none focus:border-violet-500" value={newLeadData.budget} onChange={e => setNewLeadData({...newLeadData, budget: e.target.value})} />
+                   </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Source</label>
+                  <select className="w-full text-sm p-2 border border-slate-200 rounded outline-none focus:border-violet-500" value={newLeadData.source} onChange={e => setNewLeadData({...newLeadData, source: e.target.value})}>
+                     <option>Walk-in</option><option>Website</option><option>Meta Ads</option><option>Referral</option>
+                  </select>
+                </div>
+                <button type="submit" className="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors mt-2">Save Lead</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* AI Email Modal */}
+        {selectedEmailLead && (
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center">
+             <div className="bg-white rounded-xl shadow-2xl w-[500px] border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-violet-50">
+                   <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-600"/><h3 className="font-bold text-violet-900 text-sm">AI Copilot: Email Draft</h3></div>
+                   <button onClick={() => setSelectedEmailLead(null)} className="text-violet-400 hover:text-violet-600"><X className="w-4 h-4"/></button>
+                </div>
+                <div className="p-5 space-y-4">
+                   <div className="text-[13px] text-slate-700 bg-slate-50 p-4 rounded border border-slate-100 leading-relaxed font-medium">
+                     Subject: Updates on OP Altura & Your Next Steps<br/><br/>
+                     Hi {selectedEmailLead.name},<br/><br/>
+                     Thank you for your continued interest in OP Altura. Based on our last interaction, {selectedEmailLead.ai_action.toLowerCase()}<br/><br/>
+                     I have attached the latest construction updates and cost sheet for your review. Let's connect tomorrow at 11 AM.<br/><br/>
+                     Best,<br/>Sales Team, OP Developers
+                   </div>
+                   <div className="flex gap-3 justify-end">
+                      <button onClick={() => setSelectedEmailLead(null)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded border border-slate-200">Cancel</button>
+                      <button onClick={() => setSelectedEmailLead(null)} className="px-4 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded flex items-center gap-1.5"><Send className="w-3 h-3"/> Send Email</button>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const InventoryGrid = () => {
+    const floors = [...new Set(units.map(u => u.floor))].sort((a, b) => b - a);
+    return (
+      <div className="flex-1 p-6 overflow-auto bg-slate-50/50">
+        <div className="flex justify-between items-center mb-6 bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 sticky top-0 z-10">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Tower A Matrix</h2>
+            <p className="text-slate-500 text-[11px] font-medium uppercase tracking-wider">Live Availability Engine</p>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div><span className="text-[11px] font-bold text-slate-600 uppercase">Available</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-amber-400 rounded-full"></div><span className="text-[11px] font-bold text-slate-600 uppercase">Blocked</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-rose-500 rounded-full"></div><span className="text-[11px] font-bold text-slate-600 uppercase">Booked</span></div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl space-y-3">
+          {floors.map(floor => (
+            <div key={floor} className="flex gap-4 items-center">
+              <div className="w-12 text-[11px] font-black text-slate-400 text-center bg-white py-2 rounded shadow-sm border border-slate-100">
+                F{floor}
+              </div>
+              <div className="flex gap-3 w-full">
+                {units.filter(u => u.floor === floor).sort((a,b) => a.unit_number.localeCompare(b.unit_number)).map(unit => {
+                  let styleClass = "bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md text-slate-700";
+                  let dotColor = "bg-emerald-500";
+                  
+                  if (unit.status === 'Blocked') { 
+                    styleClass = "bg-amber-50/50 border-amber-300 text-amber-900"; 
+                    dotColor = "bg-amber-400"; 
+                  }
+                  if (unit.status === 'Booked') { 
+                    styleClass = "bg-rose-50/50 border-rose-300 text-rose-900"; 
+                    dotColor = "bg-rose-500"; 
+                  }
+                  
+                  const isSelected = selectedUnit?.id === unit.id;
+
+                  return (
+                    <button
+                      key={unit.id}
+                      onClick={() => setSelectedUnit(unit)}
+                      className={`flex-1 p-3.5 rounded-xl border transition-all duration-200 text-left relative overflow-hidden ${styleClass} ${isSelected ? 'ring-2 ring-violet-500 shadow-lg scale-[1.03] z-10' : 'shadow-sm'}`}
+                    >
+                      <div className="flex justify-between items-start mb-1.5">
+                        <span className="font-extrabold text-[15px] tracking-tight">{unit.unit_number}</span>
+                        <div className={`w-2 h-2 rounded-full ${dotColor}`}></div>
+                      </div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-0.5">{unit.type}</div>
+                      <div className="text-[11px] font-medium opacity-80">{unit.carpet_area} sqft</div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const RightPanel = () => {
+    if (!selectedUnit) return (
+      <div className="w-[360px] bg-white border-l border-slate-200 p-6 flex items-center justify-center text-slate-400 shadow-[-5px_0_15px_rgba(0,0,0,0.02)] z-20 shrink-0">
+        <div className="text-center flex flex-col items-center">
+          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+            <Building className="w-5 h-5 text-slate-300" />
+          </div>
+          <p className="font-bold text-slate-500 text-sm">No Unit Selected</p>
+          <p className="text-[11px] mt-1 text-slate-400">Select a unit to view cost sheet</p>
+        </div>
+      </div>
+    );
+
+    const costs = generateCostSheet(selectedUnit);
+
+    return (
+      <div className="w-[360px] bg-white border-l border-slate-200 flex flex-col h-full shadow-[-5px_0_15px_rgba(0,0,0,0.02)] z-20 shrink-0 relative">
+        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-30">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className={`w-2 h-2 rounded-full ${selectedUnit.status === 'Available' ? 'bg-emerald-500' : selectedUnit.status === 'Blocked' ? 'bg-amber-400' : 'bg-rose-500'}`}></span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{selectedUnit.status}</span>
+            </div>
+            <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUnit.id}</h3>
+          </div>
+          <button onClick={() => setSelectedUnit(null)} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 flex-1 overflow-y-auto space-y-6 pb-28 hide-scrollbar">
+          
+          {selectedUnit.status === 'Blocked' && (
+            <div className="p-3.5 bg-amber-50 rounded-lg border border-amber-200 shadow-sm text-[13px]">
+              <div className="flex items-center gap-1.5 text-amber-900 font-extrabold mb-2 text-[10px] tracking-widest uppercase"><Clock className="w-3.5 h-3.5" /> Finance Verification</div>
+              <div className="text-amber-900 font-medium">Blocked by: <span className="font-bold">{selectedUnit.customer}</span></div>
+              <div className="text-amber-900 font-medium mt-0.5">Token: <span className="font-bold">{formatCurrency(selectedUnit.token_amount)}</span></div>
+            </div>
+          )}
+          
+          {selectedUnit.status === 'Booked' && (
+            <div className="p-3.5 bg-rose-50 rounded-lg border border-rose-200 shadow-sm text-[13px]">
+              <div className="flex items-center gap-1.5 text-rose-900 font-extrabold mb-2 text-[10px] tracking-widest uppercase"><CheckCircle className="w-3.5 h-3.5" /> Verified</div>
+              <div className="text-rose-900 font-medium">Owner: <span className="font-bold">{selectedUnit.customer}</span></div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">
+               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Typology</span>
+               <span className="font-extrabold text-slate-800 text-base">{selectedUnit.type}</span>
+             </div>
+             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">
+               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block mb-0.5">Area</span>
+               <span className="font-extrabold text-slate-800 text-base">{selectedUnit.carpet_area} <span className="text-[10px] font-medium">sqft</span></span>
+             </div>
+          </div>
+
+          {aiEnabled && selectedUnit.status === 'Available' && (
+            <div className="p-4 bg-gradient-to-br from-violet-50/50 to-indigo-50/50 rounded-lg border border-violet-100">
+              <div className="flex items-center gap-1.5 text-violet-800 font-black text-[9px] tracking-widest uppercase mb-1.5">
+                <Sparkles className="w-3 h-3" /> Pricing Engine
+              </div>
+              <p className="text-[11px] text-violet-800 font-medium">{selectedUnit.ai_insight}</p>
+            </div>
+          )}
+
+          <div>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex justify-between text-[13px]"><span className="text-slate-500 font-medium">Base Rate</span><span className="font-bold text-slate-800">{formatCurrency(selectedUnit.base_rate)} <span className="text-[10px] text-slate-400 font-normal">/sqft</span></span></div>
+              <div className="flex justify-between text-[13px]"><span className="text-slate-500 font-medium">Agreement Value</span><span className="font-bold text-slate-800">{formatCurrency(costs.agreementValue)}</span></div>
+              <div className="flex justify-between text-[13px]"><span className="text-slate-500 font-medium">Infrastructure</span><span className="font-bold text-slate-800">{formatCurrency(costs.infraCharges)}</span></div>
+              <div className="w-full h-px bg-slate-100 my-1.5"></div>
+              <div className="flex justify-between text-[13px]"><span className="text-slate-500 font-medium">Stamp Duty (6%)</span><span className="font-bold text-slate-800">{formatCurrency(costs.stampDuty)}</span></div>
+              <div className="flex justify-between text-[13px]"><span className="text-slate-500 font-medium">GST (5%)</span><span className="font-bold text-slate-800">{formatCurrency(costs.gst)}</span></div>
+              <div className="w-full h-px bg-slate-200 my-2 border-dashed border-t"></div>
+              <div className="flex justify-between items-end pt-1">
+                <span className="text-slate-500 font-black uppercase text-[10px] tracking-widest">Total Value</span>
+                <span className="text-xl font-extrabold text-indigo-700 tracking-tight">{formatCurrency(costs.total)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {selectedUnit.status === 'Available' && (role === ROLES.SALES || role === ROLES.MANAGEMENT) && (
+          <div className="absolute bottom-0 left-0 right-0 p-5 bg-white border-t border-slate-200 z-40 shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
+            <div className="space-y-2">
+              <input type="text" placeholder="Customer Name" className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-[13px] font-bold placeholder:font-medium focus:ring-1 focus:ring-violet-500 outline-none" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+              <input type="number" placeholder="Token Amount (INR)" className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-[13px] font-bold placeholder:font-medium focus:ring-1 focus:ring-violet-500 outline-none" value={tokenAmount} onChange={e => setTokenAmount(e.target.value)} />
+              <button onClick={handleBlockUnit} className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black tracking-widest uppercase text-[10px] rounded shadow-md transition-colors flex items-center justify-center gap-1.5 mt-1">
+                <Lock className="w-3.5 h-3.5" /> Send to Finance
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const FinanceView = () => {
+    const pendingUnits = units.filter(u => u.status === 'Blocked');
+    return (
+      <div className="p-6 space-y-6 w-full bg-slate-50/50 overflow-y-auto">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Maker-Checker Queue</h2>
+          <p className="text-slate-500 text-[13px] mt-0.5 font-medium">Strict compliance token verification</p>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center gap-1.5 text-slate-700 font-bold text-[11px] uppercase tracking-widest">
+             <ShieldCheck className="w-4 h-4 text-indigo-600" /> Pending Token Reconciliations
+          </div>
+          <table className="w-full text-left">
+            <thead className="bg-white border-b border-slate-100">
+              <tr>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Token Claimed</th>
+                {aiEnabled && <th className="p-4 text-[10px] font-black text-violet-500 uppercase tracking-widest flex items-center gap-1"><Sparkles className="w-3 h-3"/> AI Fraud Check</th>}
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {pendingUnits.length === 0 ? (
+                <tr><td colSpan="5" className="p-12 text-center text-slate-400 font-bold text-[13px] bg-slate-50/50">Queue is clear.</td></tr>
+              ) : pendingUnits.map(u => (
+                <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="p-4 font-extrabold text-slate-900 text-[15px]">{u.id}</td>
+                  <td className="p-4 font-bold text-slate-600 text-[13px]">{u.customer}</td>
+                  <td className="p-4 text-emerald-600 font-extrabold text-lg tracking-tight">{formatCurrency(u.token_amount)}</td>
+                  {aiEnabled && (
+                    <td className="p-4">
+                      <div className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[10px] font-bold">
+                        <CheckCircle className="w-3 h-3" /> Safe (Standard Token)
+                      </div>
+                    </td>
+                  )}
+                  <td className="p-4 space-x-2 text-right">
+                    <button onClick={() => handleCancelBlock(u.id)} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors">Reject</button>
+                    <button onClick={() => handleApproveToken(u.id)} className="px-4 py-2 bg-slate-900 text-white rounded text-xs font-bold shadow-sm hover:bg-slate-800 transition-colors">Verify & Book</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const CollectionsView = () => {
+    return (
+      <div className="p-6 space-y-6 w-full bg-slate-50/50 overflow-y-auto">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Demand Ledger</h2>
+            <p className="text-slate-500 text-[13px] mt-0.5 font-medium">Construction-linked collections</p>
+          </div>
+          <button onClick={handleAutoGenerateDemands} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-1.5">
+            <Wand2 className="w-3.5 h-3.5"/> Auto-Generate Demands
+          </button>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer & Unit</th>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Milestone</th>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount Due</th>
+                {aiEnabled && <th className="p-4 text-[10px] font-black text-violet-500 uppercase tracking-widest"><div className="flex items-center gap-1"><Sparkles className="w-3 h-3"/> Default Risk</div></th>}
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {demands.map(d => (
+                <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-4 font-bold text-slate-600 text-[13px]">{d.id}</td>
+                  <td className="p-4">
+                    <div className="font-extrabold text-slate-900 text-[13px]">{d.unitId}</div>
+                    <div className="text-[11px] text-slate-500 font-semibold">{d.customer}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-[13px] font-bold text-slate-800">{d.milestone}</div>
+                    <div className="text-[10px] text-slate-400 font-medium mt-0.5">Due: {d.dueDate}</div>
+                  </td>
+                  <td className="p-4 font-extrabold text-slate-900 text-[15px]">{formatCurrency(d.amount)}</td>
+                  
+                  {aiEnabled && (
+                    <td className="p-4">
+                      {d.status !== 'Paid' ? (
+                        <div className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-bold border ${
+                          d.ai_risk.includes('High') ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        }`}>
+                          {d.ai_risk}
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 text-[13px] font-bold">—</span>
+                      )}
+                    </td>
+                  )}
+
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border ${
+                      d.status === 'Overdue' ? 'bg-rose-100 text-rose-800 border-rose-200' : 
+                      d.status === 'Paid' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
+                      'bg-amber-100 text-amber-800 border-amber-200'
+                    }`}>
+                      {d.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    {d.status !== 'Paid' && (role === ROLES.CRM || role === ROLES.FINANCE || role === ROLES.MANAGEMENT) ? (
+                      <button onClick={() => handleRecordPayment(d.id)} className="text-violet-700 hover:text-white font-bold bg-violet-50 hover:bg-violet-600 border border-violet-200 transition-colors px-3 py-1.5 rounded text-[11px] shadow-sm">
+                        Receipt
+                      </button>
+                    ) : (
+                      <CheckCircle className="w-5 h-5 text-emerald-500 ml-auto mr-2" />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const OperationsView = () => {
+    return (
+      <div className="p-6 space-y-6 w-full bg-slate-50/50 overflow-y-auto flex-1 hide-scrollbar">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Project Ops & BOQ</h2>
+            <p className="text-slate-500 text-[13px] mt-0.5 font-medium">Construction tracking & material consumption</p>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5"/> BOQ Consumption Tracker</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Material</th>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Usage vs Est</th>
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rate Var</th>
+                  {aiEnabled && <th className="p-4 text-[10px] font-black text-violet-500 uppercase tracking-widest flex items-center gap-1"><Sparkles className="w-3 h-3"/> AI Predict</th>}
+                  <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                 {initialBoq.map(item => {
+                    const consumptionPct = Math.round((item.act_qty / item.est_qty) * 100);
+                    const rateDiff = item.act_rate - item.est_rate;
+                    const isRateOver = rateDiff > 0;
+                    
+                    return (
+                       <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4">
+                             <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{item.category}</div>
+                             <div className="font-bold text-slate-800 text-[13px]">{item.item}</div>
+                          </td>
+                          <td className="p-4">
+                             <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                                <span>{formatNumber(item.act_qty)} / {formatNumber(item.est_qty)} {item.uom}</span>
+                                <span>{consumptionPct}%</span>
+                             </div>
+                             <div className="w-48 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                <div className={`h-1.5 rounded-full ${consumptionPct > 90 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{width: `${Math.min(consumptionPct, 100)}%`}}></div>
+                             </div>
+                          </td>
+                          <td className="p-4">
+                             <div className="font-bold text-slate-700 text-[13px]">{formatCurrency(item.act_rate)} <span className="text-[10px] text-slate-400">/{item.uom}</span></div>
+                             <div className={`text-[10px] font-black mt-0.5 ${isRateOver ? 'text-rose-600' : rateDiff === 0 ? 'text-slate-400' : 'text-emerald-600'}`}>
+                                {isRateOver ? '▲' : rateDiff === 0 ? '-' : '▼'} {rateDiff !== 0 ? formatCurrency(Math.abs(rateDiff)) : 'Match'}
+                             </div>
+                          </td>
+                          {aiEnabled && (
+                            <td className="p-4 text-[11px] font-medium text-slate-600 max-w-[200px]">
+                               {item.ai_pred}
+                            </td>
+                          )}
+                          <td className="p-4 text-right">
+                             <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border ${
+                                item.status === 'Over Budget' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                item.status === 'Savings' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                'bg-blue-50 text-blue-700 border-blue-200'
+                             }`}>
+                                {item.status}
+                             </span>
+                          </td>
+                       </tr>
+                    );
+                 })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const navItems = [
+    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard, roles: [ROLES.MANAGEMENT, ROLES.SALES, ROLES.FINANCE, ROLES.CRM, ROLES.OPS] },
+    { id: 'leads', label: 'Pre-Sales', icon: Users, roles: [ROLES.MANAGEMENT, ROLES.PRE_SALES, ROLES.SALES] },
+    { id: 'inventory', label: 'Inventory Matrix', icon: Building, roles: [ROLES.MANAGEMENT, ROLES.SALES, ROLES.PRE_SALES, ROLES.FINANCE] },
+    { id: 'finance', label: 'Maker/Checker', icon: ShieldCheck, roles: [ROLES.MANAGEMENT, ROLES.FINANCE], badge: metrics.inv.blocked },
+    { id: 'collections', label: 'Ledger & Demands', icon: FileSpreadsheet, roles: [ROLES.MANAGEMENT, ROLES.CRM, ROLES.FINANCE] },
+    { id: 'operations', label: 'Ops & BOQ', icon: ClipboardList, roles: [ROLES.MANAGEMENT, ROLES.OPS] },
+  ];
+
+  return (
+    <div className="h-screen w-full bg-[#0F172A] flex font-sans text-slate-900 overflow-hidden selection:bg-violet-200 text-sm">
+      
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-[#0F172A] border-r border-slate-800 flex flex-col z-20 text-white shrink-0">
+        <div className="p-5 flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-indigo-600 rounded flex items-center justify-center border border-white/10">
+            <Building className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h1 className="text-base font-extrabold tracking-tight leading-tight">OP Platform</h1>
+            <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Enterprise</p>
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-b border-slate-800">
+          <select 
+            className="w-full bg-slate-900 border border-slate-700 text-white text-xs font-bold py-1.5 px-2 rounded outline-none focus:border-violet-500"
+            value={role}
+            onChange={(e) => {
+              const newRole = e.target.value;
+              setRole(newRole);
+              setSelectedUnit(null);
+              const allowedTabs = navItems.filter(n => n.roles.includes(newRole)).map(n => n.id);
+              if (!allowedTabs.includes(activeTab)) setActiveTab(allowedTabs[0]);
+            }}
+          >
+            {Object.values(ROLES).map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+
+        <div className="p-3 flex-1 overflow-y-auto hide-scrollbar mt-2">
+          <nav className="space-y-1">
+            {navItems.filter(item => item.roles.includes(role)).map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button 
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-[13px] font-bold transition-all ${isActive ? 'bg-violet-600/20 text-violet-400' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-violet-400' : 'text-slate-500'}`} />
+                    {item.label}
+                  </div>
+                  {item.badge > 0 && (
+                    <span className="bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black shadow-sm">{item.badge}</span>
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 flex flex-col overflow-hidden bg-white z-30 relative">
+        <header className="h-14 border-b border-slate-200 flex items-center justify-between px-6 shrink-0 bg-white z-20">
+          <div className="flex items-center gap-2 text-[13px] font-bold text-slate-500">
+            <span className="uppercase tracking-widest text-[10px]">OP Altura</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+            <span className="text-slate-900 capitalize">{activeTab.replace('-', ' ')}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input type="text" placeholder="Search..." className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-[13px] font-medium outline-none focus:ring-1 focus:ring-violet-500 focus:bg-white transition-all w-56" />
+            </div>
+            <button className="text-slate-500 hover:text-slate-900 transition-colors relative">
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+            </button>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-hidden flex relative bg-white">
+          {activeTab === 'dashboard' && <DashboardView />}
+          {activeTab === 'leads' && <LeadManagementView />}
+          {activeTab === 'finance' && <FinanceView />}
+          {activeTab === 'collections' && <CollectionsView />}
+          {activeTab === 'operations' && <OperationsView />}
+          {activeTab === 'inventory' && (
+            <>
+              <InventoryGrid />
+              <RightPanel />
+            </>
+          )}
         </div>
       </main>
 
-      {/* AI Modal */}
-      {showAiModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAiModal(false)}></div>
-          <div className="bg-slate-950 border border-slate-800 text-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
-            
-            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 text-indigo-400">
-                  <Bot className="w-5 h-5" />
+      {/* AI COPILOT OVERLAY */}
+      {aiEnabled && (
+        <div className="fixed bottom-6 right-6 z-50">
+          {showCopilot ? (
+            <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-2 duration-200">
+              <div className="bg-slate-900 p-3 flex justify-between items-center text-white">
+                <div className="flex items-center gap-2 font-bold text-[13px]">
+                  <Bot className="w-4 h-4 text-violet-400" /> OP Copilot
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">AI Deal Analyst</h3>
-                  <p className="text-xs text-slate-400">Powered by Gemini</p>
-                </div>
+                <button onClick={() => setShowCopilot(false)} className="text-slate-400 hover:text-white"><X className="w-4 h-4"/></button>
               </div>
-              <button onClick={() => setShowAiModal(false)} className="text-slate-400 hover:text-white transition-colors bg-slate-800/50 p-2 rounded-full">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-8 min-h-[200px]">
-              {isAnalyzing ? (
-                <div className="flex flex-col items-center justify-center h-full space-y-4 text-indigo-400 py-8">
-                  <Loader2 className="w-10 h-10 animate-spin" />
-                  <p className="text-sm font-semibold tracking-wider uppercase">Synthesizing Deal Math...</p>
+              
+              <div className="p-4 space-y-3 h-64 overflow-y-auto text-[13px] bg-slate-50 hide-scrollbar">
+                {copilotMsgs.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`p-2.5 rounded-lg max-w-[85%] font-medium leading-relaxed ${msg.role === 'user' ? 'bg-violet-600 text-white rounded-br-sm' : 'bg-white border border-slate-200 text-slate-700 rounded-bl-sm shadow-sm'}`}>
+                      {msg.role === 'ai' && msg.text.includes('**') ? (
+                         <span dangerouslySetInnerHTML={{__html: msg.text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-slate-900">$1</strong>')}} />
+                      ) : msg.text}
+                    </div>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+              
+              <form onSubmit={handleCopilotSubmit} className="p-3 border-t border-slate-200 bg-white">
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Ask about inventory, leads, or BOQ..." 
+                    className="w-full bg-slate-50 border border-slate-200 rounded py-2 pl-3 pr-10 outline-none text-[13px] font-medium focus:ring-1 focus:ring-violet-500"
+                    value={copilotInput}
+                    onChange={(e) => setCopilotInput(e.target.value)}
+                  />
+                  <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50" disabled={!copilotInput.trim()}>
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              ) : (
-                <div className="prose prose-invert prose-sm prose-indigo max-w-none">
-                  {/* Using a simple custom parser for markdown to avoid adding heavy libraries */}
-                  {aiReport.split('\n').map((line, i) => {
-                    if (line.startsWith('**') && line.endsWith('**')) return <h4 key={i} className="text-indigo-300 font-bold mt-4 mb-2">{line.replace(/\*\*/g, '')}</h4>;
-                    if (line.startsWith('- ') || line.startsWith('* ')) {
-                      return (
-                        <div key={i} className="flex gap-3 mb-3">
-                          <span className="text-indigo-500 mt-1 flex-shrink-0">•</span>
-                          <span dangerouslySetInnerHTML={{__html: line.replace(/^[-*]\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')}} />
-                        </div>
-                      );
-                    }
-                    return line ? <p key={i} dangerouslySetInnerHTML={{__html: line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')}} className="mb-3" /> : null;
-                  })}
-                </div>
-              )}
+              </form>
             </div>
-          </div>
+          ) : (
+            <button 
+              onClick={() => setShowCopilot(true)}
+              className="bg-slate-900 text-white p-3 rounded-full shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 group border border-slate-700"
+            >
+              <Bot className="w-5 h-5 text-violet-400" />
+            </button>
+          )}
         </div>
       )}
-
     </div>
   );
 }
